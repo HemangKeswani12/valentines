@@ -424,22 +424,26 @@ function startCarousel() {
     carouselStarted = true;
     console.log('Starting carousel with images loaded:', imagesLoaded);
     
+    // More rings, more items, bigger radius
     const rings = [
-        { radius: 300, count: 8, speed: 1 },
-        { radius: 450, count: 10, speed: 0.7 },
-        { radius: 600, count: 12, speed: 0.5 }
+        { radius: 280, count: 10, speed: 1.2 },
+        { radius: 400, count: 14, speed: 0.9 },
+        { radius: 520, count: 18, speed: 0.6 },
+        { radius: 650, count: 22, speed: 0.4 }
     ];
     
     rings.forEach((ring) => {
         for (let i = 0; i < ring.count; i++) {
             let img;
             // Alternate between pics and decorative
-            if (i % 3 === 0) {
+            if (i % 4 === 0) {
                 img = images.pic1;
-            } else if (i % 3 === 1) {
-                img = Math.random() > 0.5 ? images.heart : images.lily;
-            } else {
+            } else if (i % 4 === 1) {
+                img = images.heart;
+            } else if (i % 4 === 2) {
                 img = i % 2 === 0 ? images.pic2 : images.pic3;
+            } else {
+                img = images.lily;
             }
             
             carouselItems.push({
@@ -461,6 +465,41 @@ function drawBackgroundAndCarousel() {
     const ctx = bgCanvas.getContext('2d');
     ctx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
     
+    // Pink flowy background gradient
+    const time = Date.now() * 0.001;
+    const gradient = ctx.createRadialGradient(
+        bgCanvas.width / 2 + Math.sin(time) * 100,
+        bgCanvas.height / 2 + Math.cos(time * 0.7) * 100,
+        0,
+        bgCanvas.width / 2,
+        bgCanvas.height / 2,
+        bgCanvas.width * 0.8
+    );
+    gradient.addColorStop(0, 'rgba(255, 201, 248, 0.4)');
+    gradient.addColorStop(0.5, 'rgba(255, 182, 225, 0.2)');
+    gradient.addColorStop(1, 'rgba(255, 201, 248, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+    
+    // Additional flowing pink waves
+    ctx.globalAlpha = 0.15;
+    for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.fillStyle = '#ffc9f8';
+        for (let x = 0; x <= bgCanvas.width; x += 20) {
+            const y = bgCanvas.height / 2 + 
+                Math.sin(x * 0.01 + time + i * 2) * 150 + 
+                Math.sin(x * 0.02 + time * 1.5 + i) * 80;
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.lineTo(bgCanvas.width, bgCanvas.height);
+        ctx.lineTo(0, bgCanvas.height);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    
     // Background particles
     backgroundParticles.forEach(p => {
         p.x += p.vx;
@@ -478,7 +517,7 @@ function drawBackgroundAndCarousel() {
         ctx.fill();
     });
     
-    // Carousel
+    // Carousel - BIGGER sizes
     if (carouselStarted && carouselItems.length > 0) {
         const centerX = bgCanvas.width / 2;
         const centerY = bgCanvas.height / 2;
@@ -490,21 +529,22 @@ function drawBackgroundAndCarousel() {
             if (!item.img || !item.img.complete || item.img.naturalWidth === 0) return;
             
             const angle = item.angle + carouselRotation * item.speed;
-            const wobble = Math.sin(carouselRotation * 3 + item.offset) * 30;
+            const wobble = Math.sin(carouselRotation * 3 + item.offset) * 40;
             const radius = item.radius + wobble;
             
             const x = centerX + Math.cos(angle) * radius;
             const y = centerY + Math.sin(angle) * radius;
             
-            const scale = 0.7 + Math.sin(angle) * 0.2;
-            const size = item.decorative ? 100 : 180;
+            const scale = 0.8 + Math.sin(angle) * 0.25;
+            // BIGGER sizes
+            const size = item.decorative ? 140 : 220;
             
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate(angle * 0.2);
-            ctx.globalAlpha = 0.6 + Math.sin(carouselRotation + index) * 0.2;
+            ctx.globalAlpha = 0.65 + Math.sin(carouselRotation + index) * 0.2;
             ctx.shadowColor = '#ffc9f8';
-            ctx.shadowBlur = 15;
+            ctx.shadowBlur = 20;
             
             try {
                 ctx.drawImage(item.img, -size * scale / 2, -size * scale / 2, size * scale, size * scale);

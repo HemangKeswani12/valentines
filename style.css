@@ -318,11 +318,10 @@ canvas.visible {
     font-size: 3rem;
     color: #7a004b;
     opacity: 0;
-    transform: translateY(30px);
     transition: all 0.8s ease;
     display: none;
     position: fixed;
-    top: calc(50% - 150px);
+    top: calc(50% - 220px);
     left: 50%;
     transform: translateX(-50%) translateY(30px);
     white-space: nowrap;
