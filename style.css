@@ -515,7 +515,8 @@ canvas.visible {
     background: #000000;
     color: white;
     position: fixed;
-    transition: left 0.08s ease, top 0.08s ease;
+    /* Removed transition for left/top to prevent lag during repel */
+    will-change: transform; /* Hint for browser optimization */
 }
 
 /* ========== RESPONSIVE ========== */

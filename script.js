@@ -319,50 +319,80 @@ function startTransition() {
 // Position buttons below the question
 function positionButtons() {
     const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2 + 180;
+    // Moved lower - near bottom of page
+    const centerY = window.innerHeight - 100;
     
     buttonContainer.style.left = (centerX - 150) + 'px';
     buttonContainer.style.top = centerY + 'px';
     
+    noButton.style.position = 'fixed'; // Ensure it's fixed for transform
     noButton.style.left = (centerX + 50) + 'px';
     noButton.style.top = centerY + 'px';
 }
 
-// No button repulsion
+// No button repulsion - Optimized with transform for performance
 function setupNoButtonRepel() {
-    const repelRadius = 250;
-    const repelStrength = 50;
+    const repelRadius = 300; // Increased radius
+    const repelStrength = 100; // Increased strength
+    
+    // Initial position
+    let baseX = window.innerWidth / 2 + 50;
+    let baseY = window.innerHeight - 100;
+    let currentX = 0;
+    let currentY = 0;
+    
+    // Update base position on resize
+    window.addEventListener('resize', () => {
+        baseX = window.innerWidth / 2 + 50;
+        baseY = window.innerHeight - 100;
+        if (gameState === 'revealed') {
+            noButton.style.left = baseX + 'px';
+            noButton.style.top = baseY + 'px';
+        }
+    });
     
     document.addEventListener('mousemove', (e) => {
         if (gameState !== 'revealed') return;
         
-        const noRect = noButton.getBoundingClientRect();
-        const noCenterX = noRect.left + noRect.width / 2;
-        const noCenterY = noRect.top + noRect.height / 2;
+        // Get center of button's current position
+        const rect = noButton.getBoundingClientRect();
+        const btnX = rect.left + rect.width / 2;
+        const btnY = rect.top + rect.height / 2;
         
-        const dx = e.clientX - noCenterX;
-        const dy = e.clientY - noCenterY;
+        const dx = e.clientX - btnX;
+        const dy = e.clientY - btnY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
         if (distance < repelRadius) {
+            // Calculate repulsion vector
             const angle = Math.atan2(dy, dx);
-            const force = Math.pow((repelRadius - distance) / repelRadius, 0.5);
+            // Non-linear force for snappy feel
+            const force = Math.pow((repelRadius - distance) / repelRadius, 2) * repelStrength;
             
-            let currentLeft = parseFloat(noButton.style.left) || (window.innerWidth / 2 + 50);
-            let currentTop = parseFloat(noButton.style.top) || (window.innerHeight / 2 + 180);
+            // Move AWAY from mouse
+            currentX -= Math.cos(angle) * force;
+            currentY -= Math.sin(angle) * force;
             
-            let newLeft = currentLeft - Math.cos(angle) * force * repelStrength;
-            let newTop = currentTop - Math.sin(angle) * force * repelStrength;
+            // Apply bounds checking relative to viewport
+            // (Simplified bounds: keep generally on screen)
+            const absoluteX = baseX + currentX;
+            const absoluteY = baseY + currentY;
             
-            const padding = 80;
-            const maxX = window.innerWidth - noButton.offsetWidth - padding;
-            const maxY = window.innerHeight - noButton.offsetHeight - padding;
+            // Soft boundaries
+            if (absoluteX < 50 || absoluteX > window.innerWidth - 100) currentX *= 0.9;
+            if (absoluteY < 50 || absoluteY > window.innerHeight - 50) currentY *= 0.9;
             
-            newLeft = Math.max(padding, Math.min(maxX, newLeft));
-            newTop = Math.max(padding, Math.min(maxY, newTop));
-            
-            noButton.style.left = newLeft + 'px';
-            noButton.style.top = newTop + 'px';
+            // Apply transform - much smoother than changing top/left
+            noButton.style.transform = `translate(${currentX}px, ${currentY}px)`;
+        } else {
+            // Slowly return to original position if mouse is far away
+            currentX *= 0.95;
+            currentY *= 0.95;
+            if (Math.abs(currentX) < 0.1 && Math.abs(currentY) < 0.1) {
+                currentX = 0;
+                currentY = 0;
+            }
+            noButton.style.transform = `translate(${currentX}px, ${currentY}px)`;
         }
     });
 }
