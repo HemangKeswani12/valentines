@@ -220,12 +220,15 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Check completion
+// Check completion - ONLY check word-display boxes, NOT name-row
 function checkCompletion() {
-    const allFilled = Array.from(document.querySelectorAll('.letter-box:not(.space):not(.question-mark)'))
+    const allFilled = Array.from(document.querySelectorAll('#word-display .letter-box:not(.space):not(.question-mark)'))
         .every(box => box.classList.contains('filled'));
     
+    console.log('Checking completion:', allFilled);
+    
     if (allFilled) {
+        console.log('PUZZLE COMPLETE! Starting transition...');
         gameState = 'transitioning';
         startTransition();
     }
