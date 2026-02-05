@@ -317,9 +317,10 @@ canvas.visible {
     display: none;
     gap: 8px;
     justify-content: center;
-    margin-bottom: 15px;
+    margin-bottom: 100px; /* Increased spacing as requested */
     opacity: 0;
     transition: opacity 0.8s ease;
+    width: 100%;
 }
 
 #name-row.visible {

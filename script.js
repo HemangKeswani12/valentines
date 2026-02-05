@@ -222,10 +222,15 @@ document.addEventListener('keydown', (e) => {
 
 // Check completion - ONLY check word-display boxes, NOT name-row
 function checkCompletion() {
-    const allFilled = Array.from(document.querySelectorAll('#word-display .letter-box:not(.space):not(.question-mark)'))
-        .every(box => box.classList.contains('filled'));
+    // Select ONLY boxes inside #word-display, ignoring space/question-mark/name-row
+    const puzzleBoxes = Array.from(document.querySelectorAll('#word-display .letter-box:not(.space):not(.question-mark)'));
     
-    console.log('Checking completion:', allFilled);
+    // Safety check
+    if (puzzleBoxes.length === 0) return;
+
+    const allFilled = puzzleBoxes.every(box => box.classList.contains('filled'));
+    
+    console.log(`Checking completion: ${allFilled} (${puzzleBoxes.length} boxes)`);
     
     if (allFilled) {
         console.log('PUZZLE COMPLETE! Starting transition...');
@@ -236,6 +241,7 @@ function checkCompletion() {
 
 // Start transition
 function startTransition() {
+    console.log('Transition started');
     // Change background immediately
     document.body.classList.add('colored');
     
@@ -248,8 +254,10 @@ function startTransition() {
     
     // Hide website clutter
     setTimeout(() => {
-        document.getElementById('site-header').classList.add('hidden');
-        document.getElementById('main-content').classList.add('hidden');
+        const header = document.getElementById('site-header');
+        const main = document.getElementById('main-content');
+        if(header) header.classList.add('hidden');
+        if(main) main.classList.add('hidden');
     }, 200);
     
     // Center the game area and show name
@@ -277,10 +285,14 @@ function startTransition() {
     // Start visual effects
     setTimeout(() => {
         console.log('Starting visual effects...');
-        bgCanvas.classList.add('visible');
-        bgCanvas.style.opacity = '1';
-        mouseCanvas.classList.add('visible');
-        mouseCanvas.style.opacity = '1';
+        if(bgCanvas) {
+            bgCanvas.classList.add('visible');
+            bgCanvas.style.opacity = '1';
+        }
+        if(mouseCanvas) {
+            mouseCanvas.classList.add('visible');
+            mouseCanvas.style.opacity = '1';
+        }
         startBackgroundParticles();
         startCarousel();
         startSpotlight();
@@ -289,14 +301,16 @@ function startTransition() {
     // Show question mark (pops in to the RIGHT of valentine)
     setTimeout(() => {
         const qBox = document.getElementById('question-mark-box');
-        qBox.classList.add('pink');
-        qBox.classList.add('visible');
+        if(qBox) {
+            qBox.classList.add('pink');
+            qBox.classList.add('visible');
+        }
     }, 1500);
     
     // Show buttons
     setTimeout(() => {
         positionButtons();
-        buttonContainer.classList.add('visible');
+        if(buttonContainer) buttonContainer.classList.add('visible');
         setupNoButtonRepel();
         gameState = 'revealed';
     }, 2200);
