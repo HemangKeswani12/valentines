@@ -27,7 +27,7 @@ const keyboardDiv = document.getElementById('keyboard');
 const yesButton = document.getElementById('yes-button');
 const noButton = document.getElementById('no-button');
 const buttonContainer = document.getElementById('button-container');
-const namePrefix = document.getElementById('name-prefix');
+const nameRow = document.getElementById('name-row');
 const gameScreen = document.getElementById('game-screen');
 
 // Canvases
@@ -79,10 +79,30 @@ setupCanvases();
 
 // Initialize game
 function initGame() {
+    createNameRow();
     createWordDisplay();
     createKeyboard();
     setupMouseTracking();
     requestAnimationFrame(mainLoop);
+}
+
+// Create "dear aaroushi," as letter boxes (hidden initially)
+function createNameRow() {
+    const name = "DEAR AAROUSHI,";
+    
+    for (let i = 0; i < name.length; i++) {
+        const box = document.createElement('div');
+        box.className = 'letter-box pink';
+        box.textContent = name[i];
+        box.style.transitionDelay = `${i * 0.05}s`;
+        
+        if (name[i] === ' ') {
+            box.classList.add('space');
+            box.textContent = '';
+        }
+        
+        nameRow.appendChild(box);
+    }
 }
 
 // Create word display with question mark box at the end
@@ -235,13 +255,19 @@ function startTransition() {
         wordDisplayWrapper.classList.add('centered');
         wordDisplay.classList.add('large');
         
-        // Show name ABOVE the question
-        namePrefix.classList.add('visible');
+        // Show name row ABOVE the question (same box style)
+        nameRow.classList.add('visible');
         
-        // Add floating to letters
-        document.querySelectorAll('.letter-box:not(.space)').forEach((box, i) => {
+        // Add floating to all letters including name
+        document.querySelectorAll('#word-display .letter-box:not(.space)').forEach((box, i) => {
             box.classList.add('floating');
             box.style.animationDelay = `${i * 0.08}s`;
+        });
+        
+        // Float name row letters too
+        document.querySelectorAll('#name-row .letter-box:not(.space)').forEach((box, i) => {
+            box.classList.add('floating');
+            box.style.animationDelay = `${i * 0.1}s`;
         });
     }, 600);
     

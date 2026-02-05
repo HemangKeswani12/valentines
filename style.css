@@ -313,25 +313,29 @@ canvas.visible {
     align-items: center;
 }
 
-#name-prefix {
-    font-family: 'Winter Draw', cursive;
-    font-size: 3rem;
-    color: #7a004b;
-    opacity: 0;
-    transition: all 0.8s ease;
+#name-row {
     display: none;
-    position: fixed;
-    top: calc(50% - 220px);
-    left: 50%;
-    transform: translateX(-50%) translateY(30px);
-    white-space: nowrap;
-    z-index: 55;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 15px;
+    opacity: 0;
+    transition: opacity 0.8s ease;
 }
 
-#name-prefix.visible {
+#name-row.visible {
+    display: flex;
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
-    display: block;
+}
+
+#name-row .letter-box {
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.5s ease;
+}
+
+#name-row.visible .letter-box {
+    opacity: 1;
+    transform: scale(1);
 }
 
 #word-display {
