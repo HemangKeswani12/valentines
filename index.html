@@ -4,21 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daily Word Puzzle - DailyGames.com</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Pacifico&display=swap" rel="stylesheet">
-    <style>
-        @import url('https://fonts.cdnfonts.com/css/winter-draw');
-    </style>
+    <link href="https://fonts.cdnfonts.com/css/winter-draw" rel="stylesheet">
 </head>
 <body>
-    <!-- Mouse follower particles -->
+    <!-- All canvases -->
     <canvas id="mouse-particles-canvas"></canvas>
-    
-    <!-- Background effects canvas -->
     <canvas id="background-canvas"></canvas>
-    
-    <!-- Spotlight canvas -->
     <canvas id="spotlight-canvas"></canvas>
+    <canvas id="physics-canvas"></canvas>
 
     <!-- Website Header -->
     <header id="site-header">
@@ -88,37 +85,29 @@
                 <!-- Hangman Drawing -->
                 <div id="hangman-container">
                     <svg id="hangman-svg" viewBox="0 0 200 250">
-                        <!-- Gallows -->
                         <line x1="20" y1="230" x2="100" y2="230" stroke="#333" stroke-width="4"/>
                         <line x1="60" y1="230" x2="60" y2="20" stroke="#333" stroke-width="4"/>
                         <line x1="60" y1="20" x2="140" y2="20" stroke="#333" stroke-width="4"/>
                         <line x1="140" y1="20" x2="140" y2="50" stroke="#333" stroke-width="4"/>
-                        <!-- Head -->
                         <circle id="hm-head" cx="140" cy="70" r="20" stroke="#333" stroke-width="3" fill="none" class="hm-part"/>
-                        <!-- Body -->
                         <line id="hm-body" x1="140" y1="90" x2="140" y2="150" stroke="#333" stroke-width="3" class="hm-part"/>
-                        <!-- Left Arm -->
                         <line id="hm-larm" x1="140" y1="110" x2="110" y2="130" stroke="#333" stroke-width="3" class="hm-part"/>
-                        <!-- Right Arm -->
                         <line id="hm-rarm" x1="140" y1="110" x2="170" y2="130" stroke="#333" stroke-width="3" class="hm-part"/>
-                        <!-- Left Leg -->
                         <line id="hm-lleg" x1="140" y1="150" x2="110" y2="190" stroke="#333" stroke-width="3" class="hm-part"/>
-                        <!-- Right Leg -->
                         <line id="hm-rleg" x1="140" y1="150" x2="170" y2="190" stroke="#333" stroke-width="3" class="hm-part"/>
                     </svg>
                     <div class="wrong-count">Wrong: <span id="wrong-counter">0</span>/6</div>
                 </div>
 
-                <!-- Word Display -->
-                <div id="word-display-container">
+                <!-- Word Display Area -->
+                <div id="word-display-wrapper">
+                    <!-- Name will be inserted here dynamically -->
+                    <div id="name-prefix">aaroushi deshpande,</div>
                     <div id="word-display"></div>
                 </div>
             </div>
 
             <div id="keyboard"></div>
-            
-            <div class="game-footer">
-            </div>
         </div>
 
         <!-- Right Sidebar -->
@@ -151,22 +140,12 @@
         </aside>
     </main>
 
-    <!-- Transformed Question Elements (hidden initially) -->
-    <div id="question-overlay">
-        <div id="name-prefix">aaroushi deshpande,</div>
-        <div id="question-wrapper">
-            <div id="transformed-question"></div>
-            <span id="question-mark">?</span>
-        </div>
-        <div class="button-container">
-            <button id="yes-button" class="choice-btn yes-btn">Yes</button>
-            <button id="no-button" class="choice-btn no-btn">No</button>
-        </div>
+    <!-- Buttons (shown after transition) -->
+    <div id="button-container" class="button-container">
+        <button id="yes-button" class="choice-btn yes-btn">YES</button>
+        <button id="no-button" class="choice-btn no-btn">No</button>
     </div>
 
-    <!-- Physics canvas for stacking hearts/lilies -->
-    <canvas id="physics-canvas"></canvas>
-
-    <script src="script.js"></script>
+    <script src="./script.js"></script>
 </body>
 </html>

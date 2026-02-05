@@ -1,6 +1,5 @@
 // Configuration
 const DISPLAY_PHRASE = "WILL YOU BE MY VALENTINE";
-const UNIQUE_LETTERS = new Set(DISPLAY_PHRASE.replace(/ /g, '').split(''));
 const keyboard_layout = [
     ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
     ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
@@ -18,18 +17,18 @@ let backgroundParticles = [];
 let carouselItems = [];
 let physicsObjects = [];
 
-// Hangman parts order
+// Hangman parts
 const hangmanParts = ['hm-head', 'hm-body', 'hm-larm', 'hm-rarm', 'hm-lleg', 'hm-rleg'];
 
 // Elements
 const wordDisplay = document.getElementById('word-display');
-const wordDisplayContainer = document.getElementById('word-display-container');
+const wordDisplayWrapper = document.getElementById('word-display-wrapper');
 const keyboardDiv = document.getElementById('keyboard');
 const yesButton = document.getElementById('yes-button');
 const noButton = document.getElementById('no-button');
-const questionOverlay = document.getElementById('question-overlay');
+const buttonContainer = document.getElementById('button-container');
 const namePrefix = document.getElementById('name-prefix');
-const questionMark = document.getElementById('question-mark');
+const gameScreen = document.getElementById('game-screen');
 
 // Canvases
 const mouseCanvas = document.getElementById('mouse-particles-canvas');
@@ -46,11 +45,11 @@ const images = {
     pic3: new Image()
 };
 
-images.heart.src = 'pics/hrt_nobg.png';
-images.lily.src = 'pics/lily_nobg.png';
-images.pic1.src = 'pics/1.png';
-images.pic2.src = 'pics/2.png';
-images.pic3.src = 'pics/3.png';
+images.heart.src = './pics/hrt_nobg.png';
+images.lily.src = './pics/lily_nobg.png';
+images.pic1.src = './pics/1.png';
+images.pic2.src = './pics/2.png';
+images.pic3.src = './pics/3.png';
 
 // Setup canvases
 function setupCanvases() {
@@ -72,7 +71,7 @@ function initGame() {
     requestAnimationFrame(mainLoop);
 }
 
-// Create word display
+// Create word display with question mark box at the end
 function createWordDisplay() {
     const words = DISPLAY_PHRASE.split(' ');
     
@@ -91,6 +90,15 @@ function createWordDisplay() {
             letterPositions.get(word[i]).push(box);
             
             wordGroup.appendChild(box);
+        }
+        
+        // Add question mark box after "VALENTINE"
+        if (wordIndex === words.length - 1) {
+            const qBox = document.createElement('div');
+            qBox.className = 'letter-box question-mark';
+            qBox.id = 'question-mark-box';
+            qBox.textContent = '?';
+            wordGroup.appendChild(qBox);
         }
         
         wordDisplay.appendChild(wordGroup);
@@ -131,9 +139,7 @@ function createKeyboard() {
 function handleKeyPress(key) {
     if (gameState !== 'playing') return;
     
-    if (key === 'ENTER' || key === 'BACK') {
-        return;
-    }
+    if (key === 'ENTER' || key === 'BACK') return;
     
     if (key.length === 1 && /^[A-Z]$/.test(key)) {
         checkLetter(key);
@@ -175,7 +181,6 @@ document.addEventListener('keydown', (e) => {
     if (gameState !== 'playing') return;
     
     const key = e.key.toUpperCase();
-    
     if (/^[A-Z]$/.test(key)) {
         handleKeyPress(key);
     }
@@ -183,7 +188,7 @@ document.addEventListener('keydown', (e) => {
 
 // Check completion
 function checkCompletion() {
-    const allFilled = Array.from(document.querySelectorAll('.letter-box:not(.space)'))
+    const allFilled = Array.from(document.querySelectorAll('.letter-box:not(.space):not(.question-mark)'))
         .every(box => box.classList.contains('filled'));
     
     if (allFilled) {
@@ -192,84 +197,81 @@ function checkCompletion() {
     }
 }
 
-// Start transition to romantic mode
+// Start transition
 function startTransition() {
-    // Immediately start color change
+    // Change background immediately
     document.body.classList.add('colored');
     
-    // Flash effect on completion
+    // Transform letters to pink
     document.querySelectorAll('.letter-box.filled').forEach((box, i) => {
-        box.style.transition = 'all 0.3s ease';
         setTimeout(() => {
             box.classList.add('pink');
-        }, i * 30);
+        }, i * 20);
     });
     
-    // Hide website elements
+    // Hide website clutter
     setTimeout(() => {
         document.getElementById('site-header').classList.add('hidden');
-        document.getElementById('main-content').classList.add('transitioning');
-    }, 300);
+        document.getElementById('main-content').classList.add('hidden');
+    }, 200);
     
-    // Move word display to center
+    // Center the game area and show name
     setTimeout(() => {
-        wordDisplayContainer.classList.add('centered');
+        gameScreen.classList.add('centered');
+        wordDisplayWrapper.classList.add('centered');
         wordDisplay.classList.add('large');
         
-        // Add floating animation to each letter
+        // Show name ABOVE the question
+        namePrefix.classList.add('visible');
+        
+        // Add floating to letters
         document.querySelectorAll('.letter-box:not(.space)').forEach((box, i) => {
             box.classList.add('floating');
-            box.style.animationDelay = `${i * 0.1}s`;
+            box.style.animationDelay = `${i * 0.08}s`;
         });
-    }, 800);
+    }, 600);
     
-    // Start background effects
+    // Start visual effects
     setTimeout(() => {
         bgCanvas.classList.add('visible');
         mouseCanvas.classList.add('visible');
         startBackgroundParticles();
         startCarousel();
-    }, 1200);
-    
-    // Show name ABOVE question, then question mark
-    setTimeout(() => {
-        questionOverlay.classList.add('visible');
-        namePrefix.classList.add('visible');
-        
         startSpotlight();
-    }, 2000);
+    }, 1000);
     
-    // Pop in question mark after name appears
+    // Show question mark (pops in to the RIGHT of valentine)
     setTimeout(() => {
-        questionMark.classList.add('visible');
-    }, 2800);
+        const qBox = document.getElementById('question-mark-box');
+        qBox.classList.add('pink');
+        qBox.classList.add('visible');
+    }, 1500);
     
     // Show buttons
     setTimeout(() => {
-        document.querySelector('.button-container').classList.add('visible');
         positionButtons();
+        buttonContainer.classList.add('visible');
         setupNoButtonRepel();
         gameState = 'revealed';
-    }, 3200);
+    }, 2200);
 }
 
-// Position buttons
+// Position buttons below the question
 function positionButtons() {
     const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2 + 200;
+    const centerY = window.innerHeight / 2 + 180;
     
-    yesButton.style.position = 'fixed';
-    yesButton.style.left = (centerX - 180) + 'px';
-    yesButton.style.top = centerY + 'px';
+    buttonContainer.style.left = (centerX - 150) + 'px';
+    buttonContainer.style.top = centerY + 'px';
     
-    noButton.style.left = (centerX + 30) + 'px';
+    noButton.style.left = (centerX + 50) + 'px';
     noButton.style.top = centerY + 'px';
 }
 
-// Setup no button repel - MUCH more sensitive
+// No button repulsion
 function setupNoButtonRepel() {
     const repelRadius = 250;
-    const repelStrength = 40;
+    const repelStrength = 50;
     
     document.addEventListener('mousemove', (e) => {
         if (gameState !== 'revealed') return;
@@ -286,8 +288,8 @@ function setupNoButtonRepel() {
             const angle = Math.atan2(dy, dx);
             const force = Math.pow((repelRadius - distance) / repelRadius, 0.5);
             
-            let currentLeft = parseFloat(noButton.style.left) || (window.innerWidth / 2 + 30);
-            let currentTop = parseFloat(noButton.style.top) || (window.innerHeight / 2 + 200);
+            let currentLeft = parseFloat(noButton.style.left) || (window.innerWidth / 2 + 50);
+            let currentTop = parseFloat(noButton.style.top) || (window.innerHeight / 2 + 180);
             
             let newLeft = currentLeft - Math.cos(angle) * force * repelStrength;
             let newTop = currentTop - Math.sin(angle) * force * repelStrength;
@@ -305,18 +307,18 @@ function setupNoButtonRepel() {
     });
 }
 
-// Yes button handler - flood with physics hearts/lilies
-yesButton.addEventListener('click', () => {
+// YES button click - trigger physics flood
+yesButton.addEventListener('click', function() {
+    console.log('YES clicked!');
     gameState = 'celebration';
     
-    // Hide buttons
-    yesButton.style.display = 'none';
-    noButton.style.display = 'none';
+    // Hide buttons and question
+    buttonContainer.style.display = 'none';
+    gameScreen.style.display = 'none';
     
-    // Show physics canvas
+    // Show and start physics
     physicsCanvas.classList.add('visible');
-    
-    // Start physics simulation
+    physicsCanvas.style.opacity = '1';
     startPhysicsFlood();
 });
 
@@ -333,7 +335,7 @@ function mainLoop() {
     drawMouseParticles();
     drawBackgroundAndCarousel();
     drawSpotlight();
-    drawPhysics();
+    updatePhysics();
     
     requestAnimationFrame(mainLoop);
 }
@@ -344,7 +346,6 @@ function drawMouseParticles() {
     ctx.clearRect(0, 0, mouseCanvas.width, mouseCanvas.height);
     
     if (gameState === 'revealed' || gameState === 'celebration') {
-        // Create new particles
         for (let i = 0; i < 2; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = Math.random() * 4 + 2;
@@ -359,7 +360,6 @@ function drawMouseParticles() {
             });
         }
         
-        // Update and draw with DARK PINK color
         mouseParticles = mouseParticles.filter(p => {
             p.x += p.vx;
             p.y += p.vy;
@@ -368,7 +368,7 @@ function drawMouseParticles() {
             if (p.life <= 0) return false;
             
             ctx.globalAlpha = p.life * 0.8;
-            ctx.strokeStyle = '#c71585'; // Dark pink / medium violet red
+            ctx.strokeStyle = '#c71585';
             ctx.lineWidth = p.size;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
@@ -382,14 +382,14 @@ function drawMouseParticles() {
     }
 }
 
-// Background particles and carousel combined
-let bgParticlesStarted = false;
+// Background and carousel
+let bgStarted = false;
 let carouselStarted = false;
 let carouselRotation = 0;
 
 function startBackgroundParticles() {
-    if (bgParticlesStarted) return;
-    bgParticlesStarted = true;
+    if (bgStarted) return;
+    bgStarted = true;
     
     for (let i = 0; i < 200; i++) {
         backgroundParticles.push({
@@ -413,7 +413,7 @@ function startCarousel() {
         { radius: 650, count: 18, speed: 0.5 }
     ];
     
-    rings.forEach((ring, ringIndex) => {
+    rings.forEach((ring) => {
         for (let i = 0; i < ring.count; i++) {
             let img;
             if (i % 2 === 0) {
@@ -429,8 +429,7 @@ function startCarousel() {
                 radius: ring.radius,
                 speed: ring.speed,
                 decorative: img === images.heart || img === images.lily,
-                offset: Math.random() * Math.PI * 2,
-                ringIndex: ringIndex
+                offset: Math.random() * Math.PI * 2
             });
         }
     });
@@ -442,7 +441,7 @@ function drawBackgroundAndCarousel() {
     const ctx = bgCanvas.getContext('2d');
     ctx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
     
-    // Draw background particles
+    // Background particles
     backgroundParticles.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
@@ -459,7 +458,7 @@ function drawBackgroundAndCarousel() {
         ctx.fill();
     });
     
-    // Draw carousel
+    // Carousel
     if (carouselStarted) {
         const centerX = bgCanvas.width / 2;
         const centerY = bgCanvas.height / 2;
@@ -481,18 +480,9 @@ function drawBackgroundAndCarousel() {
             ctx.translate(x, y);
             ctx.rotate(angle * 0.3);
             ctx.globalAlpha = 0.5 + Math.sin(carouselRotation + index) * 0.2;
-            
             ctx.shadowColor = '#ffc9f8';
             ctx.shadowBlur = 20;
-            
-            ctx.drawImage(
-                item.img,
-                -size * scale / 2,
-                -size * scale / 2,
-                size * scale,
-                size * scale
-            );
-            
+            ctx.drawImage(item.img, -size * scale / 2, -size * scale / 2, size * scale, size * scale);
             ctx.restore();
         });
     }
@@ -500,9 +490,9 @@ function drawBackgroundAndCarousel() {
     ctx.globalAlpha = 1;
 }
 
-// Spotlight effect
-let spotlightIntensity = 0;
+// Spotlight
 let spotlightStarted = false;
+let spotlightIntensity = 0;
 
 function startSpotlight() {
     spotlightStarted = true;
@@ -535,85 +525,80 @@ function drawSpotlight() {
     ctx.fill();
 }
 
-// ========== PHYSICS ENGINE FOR STACKING ==========
+// ========== PHYSICS ENGINE ==========
 let physicsStarted = false;
-const GRAVITY = 0.5;
+const GRAVITY = 0.4;
 const BOUNCE = 0.3;
-const FRICTION = 0.98;
+const FRICTION = 0.99;
 
 function startPhysicsFlood() {
+    console.log('Starting physics flood!');
     physicsStarted = true;
     
-    // Spawn objects continuously
-    spawnPhysicsObject();
+    // Spawn objects rapidly
+    let spawnCount = 0;
+    const spawnInterval = setInterval(() => {
+        for (let i = 0; i < 5; i++) {
+            spawnPhysicsObject();
+        }
+        spawnCount++;
+        if (spawnCount > 100) {
+            clearInterval(spawnInterval);
+        }
+    }, 100);
 }
 
 function spawnPhysicsObject() {
-    if (!physicsStarted) return;
-    
-    const size = Math.random() * 40 + 50;
+    const size = Math.random() * 50 + 40;
     
     physicsObjects.push({
-        x: Math.random() * (physicsCanvas.width - size),
-        y: -size - Math.random() * 200,
-        vx: (Math.random() - 0.5) * 4,
+        x: Math.random() * (physicsCanvas.width - size * 2) + size,
+        y: -size - Math.random() * 100,
+        vx: (Math.random() - 0.5) * 6,
         vy: Math.random() * 2 + 1,
         width: size,
         height: size,
         rotation: Math.random() * Math.PI * 2,
         rotationSpeed: (Math.random() - 0.5) * 0.1,
-        img: Math.random() > 0.5 ? images.heart : images.lily,
-        grounded: false
+        img: Math.random() > 0.5 ? images.heart : images.lily
     });
-    
-    // Keep spawning until screen is filled
-    if (physicsObjects.length < 300) {
-        setTimeout(spawnPhysicsObject, 50);
-    }
 }
 
-function drawPhysics() {
+function updatePhysics() {
     if (!physicsStarted) return;
     
     const ctx = physicsCanvas.getContext('2d');
     
-    // Pink gradient background
+    // Pink background
     const gradient = ctx.createLinearGradient(0, 0, 0, physicsCanvas.height);
     gradient.addColorStop(0, '#ffc9f8');
-    gradient.addColorStop(0.5, '#ffb6e1');
-    gradient.addColorStop(1, '#ff9ed2');
+    gradient.addColorStop(1, '#ffb6c1');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, physicsCanvas.width, physicsCanvas.height);
     
-    // Update and draw physics objects
+    // Update physics
     physicsObjects.forEach((obj, i) => {
-        // Apply gravity
-        if (!obj.grounded) {
-            obj.vy += GRAVITY;
-        }
+        // Gravity
+        obj.vy += GRAVITY;
         
-        // Apply velocity
+        // Velocity
         obj.x += obj.vx;
         obj.y += obj.vy;
         obj.rotation += obj.rotationSpeed;
         
-        // Apply friction
+        // Friction
         obj.vx *= FRICTION;
         
-        // Floor collision
+        // Floor
         const floor = physicsCanvas.height - obj.height / 2;
         if (obj.y > floor) {
             obj.y = floor;
             obj.vy *= -BOUNCE;
-            obj.rotationSpeed *= 0.8;
-            
-            if (Math.abs(obj.vy) < 1) {
-                obj.vy = 0;
-                obj.grounded = true;
-            }
+            obj.rotationSpeed *= 0.7;
+            if (Math.abs(obj.vy) < 0.5) obj.vy = 0;
         }
         
-        // Wall collisions
+        // Walls
         if (obj.x < obj.width / 2) {
             obj.x = obj.width / 2;
             obj.vx *= -BOUNCE;
@@ -623,16 +608,15 @@ function drawPhysics() {
             obj.vx *= -BOUNCE;
         }
         
-        // Object-to-object collision (simplified)
+        // Collision with other objects
         for (let j = i + 1; j < physicsObjects.length; j++) {
             const other = physicsObjects[j];
             const dx = other.x - obj.x;
             const dy = other.y - obj.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            const minDist = (obj.width + other.width) / 2 * 0.8;
+            const minDist = (obj.width + other.width) / 2 * 0.7;
             
             if (dist < minDist && dist > 0) {
-                // Push apart
                 const overlap = minDist - dist;
                 const nx = dx / dist;
                 const ny = dy / dist;
@@ -642,7 +626,6 @@ function drawPhysics() {
                 other.x += nx * overlap / 2;
                 other.y += ny * overlap / 2;
                 
-                // Transfer velocity
                 const dvx = obj.vx - other.vx;
                 const dvy = obj.vy - other.vy;
                 const dvn = dvx * nx + dvy * ny;
@@ -653,15 +636,10 @@ function drawPhysics() {
                     other.vx += dvn * nx * 0.5;
                     other.vy += dvn * ny * 0.5;
                 }
-                
-                // Check if stacked
-                if (Math.abs(ny) > 0.7 && ny < 0) {
-                    obj.grounded = true;
-                }
             }
         }
         
-        // Draw object
+        // Draw
         ctx.save();
         ctx.translate(obj.x, obj.y);
         ctx.rotate(obj.rotation);
@@ -670,7 +648,7 @@ function drawPhysics() {
     });
 }
 
-// Handle resize
+// Resize handler
 window.addEventListener('resize', () => {
     setupCanvases();
     if (gameState === 'revealed') {
