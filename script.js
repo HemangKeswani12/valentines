@@ -86,9 +86,9 @@ function initGame() {
     requestAnimationFrame(mainLoop);
 }
 
-// Create "dear aaroushi," as letter boxes (hidden initially)
+// Create "dear aaroushi" as letter boxes
 function createNameRow() {
-    const name = "DEAR AAROUSHI,";
+    const name = "DEAR AAROUSHI";  // Removed comma
     
     for (let i = 0; i < name.length; i++) {
         const box = document.createElement('div');
@@ -648,17 +648,17 @@ function startPhysicsFlood() {
     console.log('Starting physics flood!');
     physicsStarted = true;
     
-    // Spawn objects 1.5x rate
+    // Spawn objects - reduced density (sparsed out)
     let spawnCount = 0;
     const spawnInterval = setInterval(() => {
-        for (let i = 0; i < 8; i++) {  // 1.5x more per tick
+        for (let i = 0; i < 4; i++) {  // Reduced from 8 to 4 per tick
             spawnPhysicsObject();
         }
         spawnCount++;
-        if (spawnCount > 120) {
+        if (spawnCount > 100) { // Slightly shorter duration to prevent overflow
             clearInterval(spawnInterval);
         }
-    }, 70);  // 1.5x faster
+    }, 90);  // Slower interval (was 70ms)
 }
 
 function spawnPhysicsObject() {

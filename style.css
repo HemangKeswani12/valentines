@@ -310,17 +310,22 @@ canvas.visible {
 }
 
 #word-display-wrapper.centered {
-    align-items: center;
+    align-items: flex-start; /* Align name and puzzle to the left relative to each other */
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1.3); /* Center the whole group */
 }
 
 #name-row {
     display: none;
     gap: 8px;
-    justify-content: center;
-    margin-bottom: 100px; /* Increased spacing as requested */
+    justify-content: flex-start; /* Left align the letters */
+    margin-bottom: 80px; /* Space between name and puzzle */
     opacity: 0;
     transition: opacity 0.8s ease;
     width: 100%;
+    padding-left: 4px; /* Slight adjustment to align perfectly with first letter box border */
 }
 
 #name-row.visible {
