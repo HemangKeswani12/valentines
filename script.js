@@ -16,7 +16,7 @@ let mousePos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 let mouseParticles = [];
 let backgroundParticles = [];
 let carouselItems = [];
-let confettiParticles = [];
+let physicsObjects = [];
 
 // Hangman parts order
 const hangmanParts = ['hm-head', 'hm-body', 'hm-larm', 'hm-rarm', 'hm-lleg', 'hm-rleg'];
@@ -29,13 +29,13 @@ const yesButton = document.getElementById('yes-button');
 const noButton = document.getElementById('no-button');
 const questionOverlay = document.getElementById('question-overlay');
 const namePrefix = document.getElementById('name-prefix');
-const celebrationScreen = document.getElementById('celebration-screen');
+const questionMark = document.getElementById('question-mark');
 
 // Canvases
 const mouseCanvas = document.getElementById('mouse-particles-canvas');
 const bgCanvas = document.getElementById('background-canvas');
 const spotlightCanvas = document.getElementById('spotlight-canvas');
-const confettiCanvas = document.getElementById('confetti-canvas');
+const physicsCanvas = document.getElementById('physics-canvas');
 
 // Load images
 const images = {
@@ -54,7 +54,7 @@ images.pic3.src = 'pics/3.png';
 
 // Setup canvases
 function setupCanvases() {
-    [mouseCanvas, bgCanvas, spotlightCanvas, confettiCanvas].forEach(canvas => {
+    [mouseCanvas, bgCanvas, spotlightCanvas, physicsCanvas].forEach(canvas => {
         if (canvas) {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -231,7 +231,7 @@ function startTransition() {
         startCarousel();
     }, 1200);
     
-    // Show name and buttons
+    // Show name ABOVE question, then question mark
     setTimeout(() => {
         questionOverlay.classList.add('visible');
         namePrefix.classList.add('visible');
@@ -239,13 +239,18 @@ function startTransition() {
         startSpotlight();
     }, 2000);
     
+    // Pop in question mark after name appears
+    setTimeout(() => {
+        questionMark.classList.add('visible');
+    }, 2800);
+    
     // Show buttons
     setTimeout(() => {
         document.querySelector('.button-container').classList.add('visible');
         positionButtons();
         setupNoButtonRepel();
         gameState = 'revealed';
-    }, 3000);
+    }, 3200);
 }
 
 // Position buttons
@@ -263,8 +268,8 @@ function positionButtons() {
 
 // Setup no button repel - MUCH more sensitive
 function setupNoButtonRepel() {
-    const repelRadius = 250; // Increased radius
-    const repelStrength = 40; // Stronger repulsion
+    const repelRadius = 250;
+    const repelStrength = 40;
     
     document.addEventListener('mousemove', (e) => {
         if (gameState !== 'revealed') return;
@@ -279,7 +284,7 @@ function setupNoButtonRepel() {
         
         if (distance < repelRadius) {
             const angle = Math.atan2(dy, dx);
-            const force = Math.pow((repelRadius - distance) / repelRadius, 0.5); // Stronger curve
+            const force = Math.pow((repelRadius - distance) / repelRadius, 0.5);
             
             let currentLeft = parseFloat(noButton.style.left) || (window.innerWidth / 2 + 30);
             let currentTop = parseFloat(noButton.style.top) || (window.innerHeight / 2 + 200);
@@ -287,7 +292,6 @@ function setupNoButtonRepel() {
             let newLeft = currentLeft - Math.cos(angle) * force * repelStrength;
             let newTop = currentTop - Math.sin(angle) * force * repelStrength;
             
-            // Keep within bounds with padding
             const padding = 80;
             const maxX = window.innerWidth - noButton.offsetWidth - padding;
             const maxY = window.innerHeight - noButton.offsetHeight - padding;
@@ -301,16 +305,19 @@ function setupNoButtonRepel() {
     });
 }
 
-// Yes button handler
+// Yes button handler - flood with physics hearts/lilies
 yesButton.addEventListener('click', () => {
     gameState = 'celebration';
-    questionOverlay.style.opacity = '0';
-    wordDisplayContainer.style.opacity = '0';
     
-    setTimeout(() => {
-        celebrationScreen.classList.add('active');
-        startCelebration();
-    }, 500);
+    // Hide buttons
+    yesButton.style.display = 'none';
+    noButton.style.display = 'none';
+    
+    // Show physics canvas
+    physicsCanvas.classList.add('visible');
+    
+    // Start physics simulation
+    startPhysicsFlood();
 });
 
 // Mouse tracking
@@ -324,15 +331,14 @@ function setupMouseTracking() {
 // Main animation loop
 function mainLoop() {
     drawMouseParticles();
-    drawBackgroundParticles();
-    drawCarousel();
+    drawBackgroundAndCarousel();
     drawSpotlight();
-    drawConfetti();
+    drawPhysics();
     
     requestAnimationFrame(mainLoop);
 }
 
-// Mouse particles
+// Mouse particles - DARK PINK
 function drawMouseParticles() {
     const ctx = mouseCanvas.getContext('2d');
     ctx.clearRect(0, 0, mouseCanvas.width, mouseCanvas.height);
@@ -353,7 +359,7 @@ function drawMouseParticles() {
             });
         }
         
-        // Update and draw
+        // Update and draw with DARK PINK color
         mouseParticles = mouseParticles.filter(p => {
             p.x += p.vx;
             p.y += p.vy;
@@ -362,7 +368,7 @@ function drawMouseParticles() {
             if (p.life <= 0) return false;
             
             ctx.globalAlpha = p.life * 0.8;
-            ctx.strokeStyle = '#ffc9f8';
+            ctx.strokeStyle = '#c71585'; // Dark pink / medium violet red
             ctx.lineWidth = p.size;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
@@ -376,8 +382,11 @@ function drawMouseParticles() {
     }
 }
 
-// Background particles
+// Background particles and carousel combined
 let bgParticlesStarted = false;
+let carouselStarted = false;
+let carouselRotation = 0;
+
 function startBackgroundParticles() {
     if (bgParticlesStarted) return;
     bgParticlesStarted = true;
@@ -394,39 +403,10 @@ function startBackgroundParticles() {
     }
 }
 
-function drawBackgroundParticles() {
-    if (gameState === 'playing') return;
-    
-    const ctx = bgCanvas.getContext('2d');
-    
-    backgroundParticles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        
-        if (p.x < 0) p.x = bgCanvas.width;
-        if (p.x > bgCanvas.width) p.x = 0;
-        if (p.y < 0) p.y = bgCanvas.height;
-        if (p.y > bgCanvas.height) p.y = 0;
-        
-        ctx.globalAlpha = p.opacity;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-    });
-    
-    ctx.globalAlpha = 1;
-}
-
-// Carousel - much bigger images, more hearts/lilies
-let carouselStarted = false;
-let carouselRotation = 0;
-
 function startCarousel() {
     if (carouselStarted) return;
     carouselStarted = true;
     
-    // Create 3 carousel rings with more items
     const rings = [
         { radius: 350, count: 12, speed: 1 },
         { radius: 500, count: 15, speed: 0.7 },
@@ -436,7 +416,6 @@ function startCarousel() {
     rings.forEach((ring, ringIndex) => {
         for (let i = 0; i < ring.count; i++) {
             let img;
-            // More hearts and lilies - every other item
             if (i % 2 === 0) {
                 img = Math.random() > 0.5 ? images.heart : images.lily;
             } else {
@@ -457,45 +436,68 @@ function startCarousel() {
     });
 }
 
-function drawCarousel() {
-    if (gameState === 'playing' || !carouselStarted) return;
+function drawBackgroundAndCarousel() {
+    if (gameState === 'playing') return;
     
     const ctx = bgCanvas.getContext('2d');
-    const centerX = bgCanvas.width / 2;
-    const centerY = bgCanvas.height / 2;
+    ctx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
     
-    carouselRotation += 0.003;
-    
-    carouselItems.forEach((item, index) => {
-        const angle = item.angle + carouselRotation * item.speed;
-        const wobble = Math.sin(carouselRotation * 3 + item.offset) * 40;
-        const radius = item.radius + wobble;
+    // Draw background particles
+    backgroundParticles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
         
-        const x = centerX + Math.cos(angle) * radius;
-        const y = centerY + Math.sin(angle) * radius;
+        if (p.x < 0) p.x = bgCanvas.width;
+        if (p.x > bgCanvas.width) p.x = 0;
+        if (p.y < 0) p.y = bgCanvas.height;
+        if (p.y > bgCanvas.height) p.y = 0;
         
-        const scale = 0.8 + Math.sin(angle) * 0.2;
-        // 2x bigger images
-        const size = item.decorative ? 120 : 240;
-        
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(angle * 0.3);
-        ctx.globalAlpha = 0.5 + Math.sin(carouselRotation + index) * 0.2;
-        
-        ctx.shadowColor = '#ffc9f8';
-        ctx.shadowBlur = 20;
-        
-        ctx.drawImage(
-            item.img,
-            -size * scale / 2,
-            -size * scale / 2,
-            size * scale,
-            size * scale
-        );
-        
-        ctx.restore();
+        ctx.globalAlpha = p.opacity;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
     });
+    
+    // Draw carousel
+    if (carouselStarted) {
+        const centerX = bgCanvas.width / 2;
+        const centerY = bgCanvas.height / 2;
+        
+        carouselRotation += 0.003;
+        
+        carouselItems.forEach((item, index) => {
+            const angle = item.angle + carouselRotation * item.speed;
+            const wobble = Math.sin(carouselRotation * 3 + item.offset) * 40;
+            const radius = item.radius + wobble;
+            
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            const scale = 0.8 + Math.sin(angle) * 0.2;
+            const size = item.decorative ? 120 : 240;
+            
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle * 0.3);
+            ctx.globalAlpha = 0.5 + Math.sin(carouselRotation + index) * 0.2;
+            
+            ctx.shadowColor = '#ffc9f8';
+            ctx.shadowBlur = 20;
+            
+            ctx.drawImage(
+                item.img,
+                -size * scale / 2,
+                -size * scale / 2,
+                size * scale,
+                size * scale
+            );
+            
+            ctx.restore();
+        });
+    }
+    
+    ctx.globalAlpha = 1;
 }
 
 // Spotlight effect
@@ -518,7 +520,6 @@ function drawSpotlight() {
     const centerX = spotlightCanvas.width / 2;
     const centerY = spotlightCanvas.height / 2 - 50;
     
-    // Cone spotlight effect
     const gradient = ctx.createRadialGradient(centerX, centerY - 200, 0, centerX, centerY, 500);
     gradient.addColorStop(0, `rgba(255, 255, 255, ${0.6 * spotlightIntensity})`);
     gradient.addColorStop(0.3, `rgba(255, 255, 255, ${0.3 * spotlightIntensity})`);
@@ -534,90 +535,139 @@ function drawSpotlight() {
     ctx.fill();
 }
 
-// Confetti celebration - hearts and lilies with zooming background
-let celebrationStarted = false;
-let bgZoom = 1;
-let bgHue = 0;
+// ========== PHYSICS ENGINE FOR STACKING ==========
+let physicsStarted = false;
+const GRAVITY = 0.5;
+const BOUNCE = 0.3;
+const FRICTION = 0.98;
 
-function startCelebration() {
-    celebrationStarted = true;
+function startPhysicsFlood() {
+    physicsStarted = true;
     
-    // Create lots of confetti particles
-    for (let i = 0; i < 150; i++) {
-        confettiParticles.push(createConfetti());
-    }
+    // Spawn objects continuously
+    spawnPhysicsObject();
 }
 
-function createConfetti() {
-    return {
-        x: Math.random() * confettiCanvas.width,
-        y: -100 - Math.random() * 500,
-        img: Math.random() > 0.5 ? images.heart : images.lily,
-        vx: (Math.random() - 0.5) * 8,
-        vy: Math.random() * 6 + 4,
+function spawnPhysicsObject() {
+    if (!physicsStarted) return;
+    
+    const size = Math.random() * 40 + 50;
+    
+    physicsObjects.push({
+        x: Math.random() * (physicsCanvas.width - size),
+        y: -size - Math.random() * 200,
+        vx: (Math.random() - 0.5) * 4,
+        vy: Math.random() * 2 + 1,
+        width: size,
+        height: size,
         rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.2,
-        scale: Math.random() * 0.6 + 0.4,
-        wobblePhase: Math.random() * Math.PI * 2,
-        wobbleSpeed: Math.random() * 0.1 + 0.05
-    };
-}
-
-function drawConfetti() {
-    if (!celebrationStarted) return;
-    
-    const ctx = confettiCanvas.getContext('2d');
-    
-    // Zooming color-changing background
-    bgZoom += 0.001;
-    bgHue = (bgHue + 0.5) % 360;
-    
-    // Draw animated background
-    const gradient = ctx.createRadialGradient(
-        confettiCanvas.width / 2, confettiCanvas.height / 2, 0,
-        confettiCanvas.width / 2, confettiCanvas.height / 2, confettiCanvas.width * bgZoom
-    );
-    
-    const h1 = bgHue;
-    const h2 = (bgHue + 30) % 360;
-    const h3 = (bgHue + 60) % 360;
-    
-    gradient.addColorStop(0, `hsl(${h1}, 100%, 90%)`);
-    gradient.addColorStop(0.5, `hsl(${h2}, 80%, 80%)`);
-    gradient.addColorStop(1, `hsl(${h3}, 70%, 70%)`);
-    
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, confettiCanvas.width, confettiCanvas.height);
-    
-    // Draw confetti
-    confettiParticles.forEach((p, index) => {
-        p.y += p.vy;
-        p.x += p.vx + Math.sin(p.wobblePhase) * 3;
-        p.wobblePhase += p.wobbleSpeed;
-        p.rotation += p.rotationSpeed;
-        p.vx *= 0.99; // Slow down horizontal
-        
-        // Reset if off screen
-        if (p.y > confettiCanvas.height + 100) {
-            confettiParticles[index] = createConfetti();
-            confettiParticles[index].y = -50;
-        }
-        
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rotation);
-        ctx.globalAlpha = 0.9;
-        
-        const size = 80 * p.scale;
-        ctx.drawImage(p.img, -size / 2, -size / 2, size, size);
-        
-        ctx.restore();
+        rotationSpeed: (Math.random() - 0.5) * 0.1,
+        img: Math.random() > 0.5 ? images.heart : images.lily,
+        grounded: false
     });
     
-    // Add more confetti over time
-    if (confettiParticles.length < 250 && Math.random() < 0.1) {
-        confettiParticles.push(createConfetti());
+    // Keep spawning until screen is filled
+    if (physicsObjects.length < 300) {
+        setTimeout(spawnPhysicsObject, 50);
     }
+}
+
+function drawPhysics() {
+    if (!physicsStarted) return;
+    
+    const ctx = physicsCanvas.getContext('2d');
+    
+    // Pink gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 0, physicsCanvas.height);
+    gradient.addColorStop(0, '#ffc9f8');
+    gradient.addColorStop(0.5, '#ffb6e1');
+    gradient.addColorStop(1, '#ff9ed2');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, physicsCanvas.width, physicsCanvas.height);
+    
+    // Update and draw physics objects
+    physicsObjects.forEach((obj, i) => {
+        // Apply gravity
+        if (!obj.grounded) {
+            obj.vy += GRAVITY;
+        }
+        
+        // Apply velocity
+        obj.x += obj.vx;
+        obj.y += obj.vy;
+        obj.rotation += obj.rotationSpeed;
+        
+        // Apply friction
+        obj.vx *= FRICTION;
+        
+        // Floor collision
+        const floor = physicsCanvas.height - obj.height / 2;
+        if (obj.y > floor) {
+            obj.y = floor;
+            obj.vy *= -BOUNCE;
+            obj.rotationSpeed *= 0.8;
+            
+            if (Math.abs(obj.vy) < 1) {
+                obj.vy = 0;
+                obj.grounded = true;
+            }
+        }
+        
+        // Wall collisions
+        if (obj.x < obj.width / 2) {
+            obj.x = obj.width / 2;
+            obj.vx *= -BOUNCE;
+        }
+        if (obj.x > physicsCanvas.width - obj.width / 2) {
+            obj.x = physicsCanvas.width - obj.width / 2;
+            obj.vx *= -BOUNCE;
+        }
+        
+        // Object-to-object collision (simplified)
+        for (let j = i + 1; j < physicsObjects.length; j++) {
+            const other = physicsObjects[j];
+            const dx = other.x - obj.x;
+            const dy = other.y - obj.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const minDist = (obj.width + other.width) / 2 * 0.8;
+            
+            if (dist < minDist && dist > 0) {
+                // Push apart
+                const overlap = minDist - dist;
+                const nx = dx / dist;
+                const ny = dy / dist;
+                
+                obj.x -= nx * overlap / 2;
+                obj.y -= ny * overlap / 2;
+                other.x += nx * overlap / 2;
+                other.y += ny * overlap / 2;
+                
+                // Transfer velocity
+                const dvx = obj.vx - other.vx;
+                const dvy = obj.vy - other.vy;
+                const dvn = dvx * nx + dvy * ny;
+                
+                if (dvn > 0) {
+                    obj.vx -= dvn * nx * 0.5;
+                    obj.vy -= dvn * ny * 0.5;
+                    other.vx += dvn * nx * 0.5;
+                    other.vy += dvn * ny * 0.5;
+                }
+                
+                // Check if stacked
+                if (Math.abs(ny) > 0.7 && ny < 0) {
+                    obj.grounded = true;
+                }
+            }
+        }
+        
+        // Draw object
+        ctx.save();
+        ctx.translate(obj.x, obj.y);
+        ctx.rotate(obj.rotation);
+        ctx.drawImage(obj.img, -obj.width / 2, -obj.height / 2, obj.width, obj.height);
+        ctx.restore();
+    });
 }
 
 // Handle resize

@@ -118,8 +118,6 @@
             <div id="keyboard"></div>
             
             <div class="game-footer">
-                <button class="hint-btn">💡 Hint</button>
-                <button class="reset-btn">🔄 New Game</button>
             </div>
         </div>
 
@@ -156,20 +154,18 @@
     <!-- Transformed Question Elements (hidden initially) -->
     <div id="question-overlay">
         <div id="name-prefix">aaroushi deshpande,</div>
-        <div id="transformed-question"></div>
+        <div id="question-wrapper">
+            <div id="transformed-question"></div>
+            <span id="question-mark">?</span>
+        </div>
         <div class="button-container">
             <button id="yes-button" class="choice-btn yes-btn">Yes</button>
             <button id="no-button" class="choice-btn no-btn">No</button>
         </div>
     </div>
 
-    <!-- Celebration Screen -->
-    <div id="celebration-screen" class="screen">
-        <canvas id="confetti-canvas"></canvas>
-        <div class="celebration-message">
-            <h1>💖</h1>
-        </div>
-    </div>
+    <!-- Physics canvas for stacking hearts/lilies -->
+    <canvas id="physics-canvas"></canvas>
 
     <script src="script.js"></script>
 </body>

@@ -508,7 +508,7 @@ canvas.visible {
     font-family: 'Winter Draw', cursive;
     font-size: 3.5rem;
     color: #7a004b;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     opacity: 0;
     transform: translateY(50px);
     transition: all 1s ease;
@@ -520,8 +520,30 @@ canvas.visible {
     transform: translateY(0);
 }
 
+#question-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+}
+
 #transformed-question {
     display: none;
+}
+
+#question-mark {
+    font-family: 'Winter Draw', cursive;
+    font-size: 4rem;
+    color: #7a004b;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    margin-left: 5px;
+}
+
+#question-mark.visible {
+    opacity: 1;
+    transform: scale(1);
 }
 
 .button-container {
@@ -566,49 +588,21 @@ canvas.visible {
     transition: left 0.1s ease, top 0.1s ease;
 }
 
-/* ========== CELEBRATION ========== */
-.screen {
+/* ========== PHYSICS CANVAS ========== */
+#physics-canvas {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    display: none;
-    align-items: center;
-    justify-content: center;
-}
-
-.screen.active {
-    display: flex;
-}
-
-#celebration-screen {
     z-index: 2000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
 }
 
-#confetti-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 2001;
+#physics-canvas.visible {
     opacity: 1;
-}
-
-.celebration-message {
-    z-index: 2002;
-    text-align: center;
-}
-
-.celebration-message h1 {
-    font-size: 10rem;
-    animation: heartBeat 0.8s ease-in-out infinite;
-}
-
-@keyframes heartBeat {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.15); }
 }
 
 /* ========== RESPONSIVE ========== */
