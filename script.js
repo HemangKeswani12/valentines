@@ -1,6 +1,6 @@
 // Configuration
-const TARGET_PHRASE = "WILLYOUBEMYVALENTINE";
 const DISPLAY_PHRASE = "WILL YOU BE MY VALENTINE";
+const UNIQUE_LETTERS = new Set(DISPLAY_PHRASE.replace(/ /g, '').split(''));
 const keyboard_layout = [
     ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
     ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
@@ -8,29 +8,34 @@ const keyboard_layout = [
 ];
 
 // State
-let gameState = 'playing'; // playing, transitioning, revealed
+let gameState = 'playing';
 let guessedLetters = new Set();
-let currentInput = '';
 let letterPositions = new Map();
+let wrongGuesses = 0;
 let mousePos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 let mouseParticles = [];
 let backgroundParticles = [];
 let carouselItems = [];
-let celebrationParticles = [];
+let confettiParticles = [];
+
+// Hangman parts order
+const hangmanParts = ['hm-head', 'hm-body', 'hm-larm', 'hm-rarm', 'hm-lleg', 'hm-rleg'];
 
 // Elements
-const gameScreen = document.getElementById('game-screen');
-const questionScreen = document.getElementById('question-screen');
-const celebrationScreen = document.getElementById('celebration-screen');
 const wordDisplay = document.getElementById('word-display');
+const wordDisplayContainer = document.getElementById('word-display-container');
 const keyboardDiv = document.getElementById('keyboard');
 const yesButton = document.getElementById('yes-button');
 const noButton = document.getElementById('no-button');
+const questionOverlay = document.getElementById('question-overlay');
+const namePrefix = document.getElementById('name-prefix');
+const celebrationScreen = document.getElementById('celebration-screen');
 
 // Canvases
 const mouseCanvas = document.getElementById('mouse-particles-canvas');
 const bgCanvas = document.getElementById('background-canvas');
 const spotlightCanvas = document.getElementById('spotlight-canvas');
+const confettiCanvas = document.getElementById('confetti-canvas');
 
 // Load images
 const images = {
@@ -49,9 +54,11 @@ images.pic3.src = 'pics/3.png';
 
 // Setup canvases
 function setupCanvases() {
-    [mouseCanvas, bgCanvas, spotlightCanvas].forEach(canvas => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+    [mouseCanvas, bgCanvas, spotlightCanvas, confettiCanvas].forEach(canvas => {
+        if (canvas) {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
     });
 }
 
@@ -62,7 +69,7 @@ function initGame() {
     createWordDisplay();
     createKeyboard();
     setupMouseTracking();
-    animateMouseParticles();
+    requestAnimationFrame(mainLoop);
 }
 
 // Create word display
@@ -78,10 +85,6 @@ function createWordDisplay() {
             box.className = 'letter-box';
             box.dataset.letter = word[i];
             
-            // Store position in the original phrase (without spaces)
-            const posInPhrase = DISPLAY_PHRASE.substring(0, DISPLAY_PHRASE.indexOf(word) + i).replace(/ /g, '').length;
-            box.dataset.position = posInPhrase;
-            
             if (!letterPositions.has(word[i])) {
                 letterPositions.set(word[i], []);
             }
@@ -92,7 +95,6 @@ function createWordDisplay() {
         
         wordDisplay.appendChild(wordGroup);
         
-        // Add space between words
         if (wordIndex < words.length - 1) {
             const space = document.createElement('div');
             space.className = 'letter-box space';
@@ -129,17 +131,12 @@ function createKeyboard() {
 function handleKeyPress(key) {
     if (gameState !== 'playing') return;
     
-    if (key === 'ENTER') {
-        if (currentInput) {
-            checkLetter(currentInput);
-            currentInput = '';
-        }
-    } else if (key === 'BACK') {
-        currentInput = '';
-    } else if (key.length === 1) {
-        currentInput = key;
-        checkLetter(currentInput);
-        currentInput = '';
+    if (key === 'ENTER' || key === 'BACK') {
+        return;
+    }
+    
+    if (key.length === 1 && /^[A-Z]$/.test(key)) {
+        checkLetter(key);
     }
 }
 
@@ -151,20 +148,25 @@ function checkLetter(letter) {
     const keyElement = document.querySelector(`[data-key="${letter}"]`);
     
     if (letterPositions.has(letter)) {
-        // Correct letter
         keyElement.classList.add('correct');
         const boxes = letterPositions.get(letter);
         
-        boxes.forEach(box => {
-            box.textContent = letter;
-            box.classList.add('filled');
+        boxes.forEach((box, i) => {
+            setTimeout(() => {
+                box.textContent = letter;
+                box.classList.add('filled');
+            }, i * 100);
         });
         
-        // Check if puzzle is complete
-        checkCompletion();
+        setTimeout(checkCompletion, boxes.length * 100 + 200);
     } else {
-        // Wrong letter
         keyElement.classList.add('wrong');
+        wrongGuesses++;
+        document.getElementById('wrong-counter').textContent = wrongGuesses;
+        
+        if (wrongGuesses <= 6) {
+            document.getElementById(hangmanParts[wrongGuesses - 1]).classList.add('visible');
+        }
     }
 }
 
@@ -174,11 +176,7 @@ document.addEventListener('keydown', (e) => {
     
     const key = e.key.toUpperCase();
     
-    if (key === 'ENTER') {
-        handleKeyPress('ENTER');
-    } else if (key === 'BACKSPACE') {
-        handleKeyPress('BACK');
-    } else if (/^[A-Z]$/.test(key)) {
+    if (/^[A-Z]$/.test(key)) {
         handleKeyPress(key);
     }
 });
@@ -189,117 +187,84 @@ function checkCompletion() {
         .every(box => box.classList.contains('filled'));
     
     if (allFilled) {
-        setTimeout(() => transitionToQuestion(), 1000);
+        gameState = 'transitioning';
+        startTransition();
     }
 }
 
-// Transition to question
-function transitionToQuestion() {
-    gameState = 'transitioning';
-    
-    // Fade to pink background
+// Start transition to romantic mode
+function startTransition() {
+    // Immediately start color change
     document.body.classList.add('colored');
     
-    // Change all green boxes to pink
+    // Flash effect on completion
+    document.querySelectorAll('.letter-box.filled').forEach((box, i) => {
+        box.style.transition = 'all 0.3s ease';
+        setTimeout(() => {
+            box.classList.add('pink');
+        }, i * 30);
+    });
+    
+    // Hide website elements
     setTimeout(() => {
-        document.querySelectorAll('.letter-box.filled').forEach(box => {
-            box.style.background = '#ffc9f8';
-            box.style.borderColor = '#7a004b';
-            box.style.color = '#7a004b';
+        document.getElementById('site-header').classList.add('hidden');
+        document.getElementById('main-content').classList.add('transitioning');
+    }, 300);
+    
+    // Move word display to center
+    setTimeout(() => {
+        wordDisplayContainer.classList.add('centered');
+        wordDisplay.classList.add('large');
+        
+        // Add floating animation to each letter
+        document.querySelectorAll('.letter-box:not(.space)').forEach((box, i) => {
+            box.classList.add('floating');
+            box.style.animationDelay = `${i * 0.1}s`;
         });
-    }, 1000);
-    
-    // Center and animate boxes
-    setTimeout(() => {
-        wordDisplay.style.transition = 'all 2s ease';
-        wordDisplay.style.transform = 'scale(1.2)';
-        
-        // Hide keyboard and title
-        keyboardDiv.style.transition = 'opacity 1s ease';
-        keyboardDiv.style.opacity = '0';
-        document.getElementById('game-title').style.opacity = '0';
-    }, 1500);
-    
-    // Start background animations
-    setTimeout(() => {
-        startBackgroundParticles();
-        startCarousel();
-    }, 2500);
-    
-    // Transition to question screen
-    setTimeout(() => {
-        gameScreen.classList.remove('active');
-        questionScreen.classList.add('active');
-        
-        animateQuestionReveal();
-        startSpotlight();
-    }, 4000);
-}
-
-// Animate question reveal
-function animateQuestionReveal() {
-    const namePrefix = document.getElementById('name-prefix');
-    const questionText = document.getElementById('question-text');
-    const questionMark = document.getElementById('question-mark');
-    const buttonContainer = document.querySelector('.button-container');
-    
-    // Set text content
-    namePrefix.textContent = 'aaroushi deshpande, ';
-    questionText.textContent = 'will you be my valentine';
-    questionMark.textContent = '?';
-    
-    // Animate name sliding from bottom
-    namePrefix.style.animation = 'none';
-    namePrefix.style.transform = 'translateY(100px)';
-    namePrefix.style.opacity = '0';
-    
-    setTimeout(() => {
-        namePrefix.style.transition = 'all 1s ease';
-        namePrefix.style.transform = 'translateY(0)';
-        namePrefix.style.opacity = '1';
-    }, 100);
-    
-    // Animate question text
-    setTimeout(() => {
-        questionText.style.transition = 'all 1s ease';
-        questionText.style.opacity = '1';
     }, 800);
     
-    // Pop in question mark
+    // Start background effects
     setTimeout(() => {
-        questionMark.style.animation = 'popIn 0.5s ease-out forwards';
-        questionMark.style.opacity = '1';
-    }, 1500);
+        bgCanvas.classList.add('visible');
+        mouseCanvas.classList.add('visible');
+        startBackgroundParticles();
+        startCarousel();
+    }, 1200);
+    
+    // Show name and buttons
+    setTimeout(() => {
+        questionOverlay.classList.add('visible');
+        namePrefix.classList.add('visible');
+        
+        startSpotlight();
+    }, 2000);
     
     // Show buttons
     setTimeout(() => {
-        buttonContainer.style.transition = 'opacity 1s ease';
-        buttonContainer.style.opacity = '1';
-        
-        // Position buttons
+        document.querySelector('.button-container').classList.add('visible');
         positionButtons();
         setupNoButtonRepel();
-    }, 2500);
-    
-    gameState = 'revealed';
+        gameState = 'revealed';
+    }, 3000);
 }
 
 // Position buttons
 function positionButtons() {
-    const containerRect = document.querySelector('.question-container').getBoundingClientRect();
     const centerX = window.innerWidth / 2;
-    const centerY = containerRect.bottom + 100;
+    const centerY = window.innerHeight / 2 + 200;
     
-    yesButton.style.left = (centerX - 200) + 'px';
+    yesButton.style.position = 'fixed';
+    yesButton.style.left = (centerX - 180) + 'px';
     yesButton.style.top = centerY + 'px';
     
-    noButton.style.left = (centerX + 50) + 'px';
+    noButton.style.left = (centerX + 30) + 'px';
     noButton.style.top = centerY + 'px';
 }
 
-// Setup no button repel
+// Setup no button repel - MUCH more sensitive
 function setupNoButtonRepel() {
-    const repelRadius = 150;
+    const repelRadius = 250; // Increased radius
+    const repelStrength = 40; // Stronger repulsion
     
     document.addEventListener('mousemove', (e) => {
         if (gameState !== 'revealed') return;
@@ -314,20 +279,24 @@ function setupNoButtonRepel() {
         
         if (distance < repelRadius) {
             const angle = Math.atan2(dy, dx);
-            const force = (repelRadius - distance) / repelRadius;
+            const force = Math.pow((repelRadius - distance) / repelRadius, 0.5); // Stronger curve
             
-            const currentLeft = parseInt(noButton.style.left);
-            const currentTop = parseInt(noButton.style.top);
+            let currentLeft = parseFloat(noButton.style.left) || (window.innerWidth / 2 + 30);
+            let currentTop = parseFloat(noButton.style.top) || (window.innerHeight / 2 + 200);
             
-            const newLeft = currentLeft - Math.cos(angle) * force * 20;
-            const newTop = currentTop - Math.sin(angle) * force * 20;
+            let newLeft = currentLeft - Math.cos(angle) * force * repelStrength;
+            let newTop = currentTop - Math.sin(angle) * force * repelStrength;
             
-            // Keep within bounds
-            const maxX = window.innerWidth - noButton.offsetWidth - 50;
-            const maxY = window.innerHeight - noButton.offsetHeight - 50;
+            // Keep within bounds with padding
+            const padding = 80;
+            const maxX = window.innerWidth - noButton.offsetWidth - padding;
+            const maxY = window.innerHeight - noButton.offsetHeight - padding;
             
-            noButton.style.left = Math.max(50, Math.min(maxX, newLeft)) + 'px';
-            noButton.style.top = Math.max(50, Math.min(maxY, newTop)) + 'px';
+            newLeft = Math.max(padding, Math.min(maxX, newLeft));
+            newTop = Math.max(padding, Math.min(maxY, newTop));
+            
+            noButton.style.left = newLeft + 'px';
+            noButton.style.top = newTop + 'px';
         }
     });
 }
@@ -335,11 +304,13 @@ function setupNoButtonRepel() {
 // Yes button handler
 yesButton.addEventListener('click', () => {
     gameState = 'celebration';
-    questionScreen.classList.remove('active');
-    celebrationScreen.classList.add('active');
+    questionOverlay.style.opacity = '0';
+    wordDisplayContainer.style.opacity = '0';
     
-    tripleBackgroundParticles();
-    startCelebration();
+    setTimeout(() => {
+        celebrationScreen.classList.add('active');
+        startCelebration();
+    }, 500);
 });
 
 // Mouse tracking
@@ -350,283 +321,303 @@ function setupMouseTracking() {
     });
 }
 
-// Mouse particles animation
-function animateMouseParticles() {
-    const ctx = mouseCanvas.getContext('2d');
+// Main animation loop
+function mainLoop() {
+    drawMouseParticles();
+    drawBackgroundParticles();
+    drawCarousel();
+    drawSpotlight();
+    drawConfetti();
     
-    function draw() {
-        ctx.clearRect(0, 0, mouseCanvas.width, mouseCanvas.height);
-        
-        if (gameState === 'revealed' || gameState === 'celebration') {
-            // Create new particle
-            if (Math.random() < 0.3) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 3 + 2;
-                
-                mouseParticles.push({
-                    x: mousePos.x,
-                    y: mousePos.y,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed,
-                    life: 1,
-                    size: Math.random() * 2 + 1
-                });
-            }
+    requestAnimationFrame(mainLoop);
+}
+
+// Mouse particles
+function drawMouseParticles() {
+    const ctx = mouseCanvas.getContext('2d');
+    ctx.clearRect(0, 0, mouseCanvas.width, mouseCanvas.height);
+    
+    if (gameState === 'revealed' || gameState === 'celebration') {
+        // Create new particles
+        for (let i = 0; i < 2; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 4 + 2;
             
-            // Update and draw particles
-            mouseParticles = mouseParticles.filter(p => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life -= 0.02;
-                
-                if (p.life <= 0) return false;
-                
-                ctx.globalAlpha = p.life;
-                ctx.strokeStyle = '#ffc9f8';
-                ctx.lineWidth = p.size;
-                ctx.beginPath();
-                ctx.moveTo(p.x, p.y);
-                ctx.lineTo(p.x + p.vx * 5, p.y + p.vy * 5);
-                ctx.stroke();
-                
-                return true;
+            mouseParticles.push({
+                x: mousePos.x,
+                y: mousePos.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1,
+                size: Math.random() * 2 + 1
             });
         }
         
+        // Update and draw
+        mouseParticles = mouseParticles.filter(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.02;
+            
+            if (p.life <= 0) return false;
+            
+            ctx.globalAlpha = p.life * 0.8;
+            ctx.strokeStyle = '#ffc9f8';
+            ctx.lineWidth = p.size;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x + p.vx * 8, p.y + p.vy * 8);
+            ctx.stroke();
+            
+            return true;
+        });
+        
         ctx.globalAlpha = 1;
-        requestAnimationFrame(draw);
     }
-    
-    draw();
 }
 
 // Background particles
+let bgParticlesStarted = false;
 function startBackgroundParticles() {
+    if (bgParticlesStarted) return;
+    bgParticlesStarted = true;
+    
+    for (let i = 0; i < 200; i++) {
+        backgroundParticles.push({
+            x: Math.random() * bgCanvas.width,
+            y: Math.random() * bgCanvas.height,
+            size: Math.random() * 3 + 1,
+            vx: (Math.random() - 0.5) * 0.8,
+            vy: (Math.random() - 0.5) * 0.8,
+            opacity: Math.random() * 0.5 + 0.3
+        });
+    }
+}
+
+function drawBackgroundParticles() {
+    if (gameState === 'playing') return;
+    
     const ctx = bgCanvas.getContext('2d');
     
-    // Create particles
-    for (let i = 0; i < 150; i++) {
-        backgroundParticles.push({
-            x: Math.random() * bgCanvas.width,
-            y: Math.random() * bgCanvas.height,
-            size: Math.random() * 3 + 1,
-            vx: (Math.random() - 0.5) * 0.5,
-            vy: (Math.random() - 0.5) * 0.5,
-            opacity: Math.random() * 0.5 + 0.3
-        });
-    }
+    backgroundParticles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        
+        if (p.x < 0) p.x = bgCanvas.width;
+        if (p.x > bgCanvas.width) p.x = 0;
+        if (p.y < 0) p.y = bgCanvas.height;
+        if (p.y > bgCanvas.height) p.y = 0;
+        
+        ctx.globalAlpha = p.opacity;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
     
-    function draw() {
-        if (gameState === 'playing') return;
-        
-        ctx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-        
-        backgroundParticles.forEach(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            
-            if (p.x < 0 || p.x > bgCanvas.width) p.vx *= -1;
-            if (p.y < 0 || p.y > bgCanvas.height) p.vy *= -1;
-            
-            ctx.globalAlpha = p.opacity;
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
-        ctx.globalAlpha = 1;
-        requestAnimationFrame(draw);
-    }
-    
-    draw();
+    ctx.globalAlpha = 1;
 }
 
-// Triple particles
-function tripleBackgroundParticles() {
-    for (let i = 0; i < 300; i++) {
-        backgroundParticles.push({
-            x: Math.random() * bgCanvas.width,
-            y: Math.random() * bgCanvas.height,
-            size: Math.random() * 3 + 1,
-            vx: (Math.random() - 0.5) * 0.5,
-            vy: (Math.random() - 0.5) * 0.5,
-            opacity: Math.random() * 0.5 + 0.3
-        });
-    }
-}
+// Carousel - much bigger images, more hearts/lilies
+let carouselStarted = false;
+let carouselRotation = 0;
 
-// Carousel
 function startCarousel() {
-    const ctx = bgCanvas.getContext('2d');
+    if (carouselStarted) return;
+    carouselStarted = true;
     
-    // Create 3 carousels with different radii
-    const carousels = [
-        { radius: 300, items: [] },
-        { radius: 450, items: [] },
-        { radius: 600, items: [] }
+    // Create 3 carousel rings with more items
+    const rings = [
+        { radius: 350, count: 12, speed: 1 },
+        { radius: 500, count: 15, speed: 0.7 },
+        { radius: 650, count: 18, speed: 0.5 }
     ];
     
-    carousels.forEach((carousel, carouselIndex) => {
-        const itemCount = 9;
-        for (let i = 0; i < itemCount; i++) {
+    rings.forEach((ring, ringIndex) => {
+        for (let i = 0; i < ring.count; i++) {
             let img;
-            if (i % 3 === 0) img = images.pic1;
-            else if (i % 3 === 1) img = images.heart;
-            else img = images.lily;
-            
-            if (i === 1 || i === 4 || i === 7) {
+            // More hearts and lilies - every other item
+            if (i % 2 === 0) {
                 img = Math.random() > 0.5 ? images.heart : images.lily;
+            } else {
+                const pics = [images.pic1, images.pic2, images.pic3];
+                img = pics[i % 3];
             }
             
-            carousel.items.push({
+            carouselItems.push({
                 img: img,
-                angle: (i / itemCount) * Math.PI * 2,
+                angle: (i / ring.count) * Math.PI * 2,
+                radius: ring.radius,
+                speed: ring.speed,
                 decorative: img === images.heart || img === images.lily,
-                offset: Math.random() * Math.PI * 2
+                offset: Math.random() * Math.PI * 2,
+                ringIndex: ringIndex
             });
         }
     });
+}
+
+function drawCarousel() {
+    if (gameState === 'playing' || !carouselStarted) return;
     
-    let rotation = 0;
+    const ctx = bgCanvas.getContext('2d');
+    const centerX = bgCanvas.width / 2;
+    const centerY = bgCanvas.height / 2;
     
-    function draw() {
-        if (gameState === 'playing') return;
-        
-        const centerX = bgCanvas.width / 2;
-        const centerY = bgCanvas.height / 2;
-        
-        rotation += 0.002;
-        
-        carousels.forEach((carousel, index) => {
-            const speed = 1 + index * 0.3;
-            
-            carousel.items.forEach((item, itemIndex) => {
-                const angle = item.angle + rotation * speed;
-                const wobble = Math.sin(rotation * 3 + item.offset) * 30;
-                const radius = carousel.radius + wobble;
-                
-                const x = centerX + Math.cos(angle) * radius;
-                const y = centerY + Math.sin(angle) * radius;
-                
-                const scale = 0.7 + Math.sin(angle) * 0.2;
-                const size = item.decorative ? 60 : 120;
-                
-                ctx.save();
-                ctx.translate(x, y);
-                ctx.rotate(angle);
-                ctx.globalAlpha = 0.6 + Math.sin(rotation + itemIndex) * 0.2;
-                
-                ctx.shadowColor = '#ffc9f8';
-                ctx.shadowBlur = 15;
-                
-                ctx.drawImage(
-                    item.img,
-                    -size * scale / 2,
-                    -size * scale / 2,
-                    size * scale,
-                    size * scale
-                );
-                
-                ctx.restore();
-            });
-        });
-        
-        requestAnimationFrame(draw);
-    }
+    carouselRotation += 0.003;
     
-    draw();
+    carouselItems.forEach((item, index) => {
+        const angle = item.angle + carouselRotation * item.speed;
+        const wobble = Math.sin(carouselRotation * 3 + item.offset) * 40;
+        const radius = item.radius + wobble;
+        
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+        
+        const scale = 0.8 + Math.sin(angle) * 0.2;
+        // 2x bigger images
+        const size = item.decorative ? 120 : 240;
+        
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle * 0.3);
+        ctx.globalAlpha = 0.5 + Math.sin(carouselRotation + index) * 0.2;
+        
+        ctx.shadowColor = '#ffc9f8';
+        ctx.shadowBlur = 20;
+        
+        ctx.drawImage(
+            item.img,
+            -size * scale / 2,
+            -size * scale / 2,
+            size * scale,
+            size * scale
+        );
+        
+        ctx.restore();
+    });
 }
 
 // Spotlight effect
+let spotlightIntensity = 0;
+let spotlightStarted = false;
+
 function startSpotlight() {
+    spotlightStarted = true;
+    spotlightCanvas.classList.add('visible');
+}
+
+function drawSpotlight() {
+    if (!spotlightStarted || gameState === 'playing') return;
+    
     const ctx = spotlightCanvas.getContext('2d');
-    let intensity = 0;
+    ctx.clearRect(0, 0, spotlightCanvas.width, spotlightCanvas.height);
     
-    function draw() {
-        if (gameState === 'playing' || gameState === 'transitioning') return;
-        
-        ctx.clearRect(0, 0, spotlightCanvas.width, spotlightCanvas.height);
-        
-        if (intensity < 1) intensity += 0.02;
-        
-        const centerX = spotlightCanvas.width / 2;
-        const centerY = spotlightCanvas.height / 2 - 100;
-        
-        // Create spotlight
-        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 400);
-        gradient.addColorStop(0, `rgba(255, 255, 255, ${0.4 * intensity})`);
-        gradient.addColorStop(0.5, `rgba(255, 255, 255, ${0.1 * intensity})`);
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, spotlightCanvas.width, spotlightCanvas.height);
-        
-        requestAnimationFrame(draw);
-    }
+    if (spotlightIntensity < 1) spotlightIntensity += 0.015;
     
-    draw();
+    const centerX = spotlightCanvas.width / 2;
+    const centerY = spotlightCanvas.height / 2 - 50;
+    
+    // Cone spotlight effect
+    const gradient = ctx.createRadialGradient(centerX, centerY - 200, 0, centerX, centerY, 500);
+    gradient.addColorStop(0, `rgba(255, 255, 255, ${0.6 * spotlightIntensity})`);
+    gradient.addColorStop(0.3, `rgba(255, 255, 255, ${0.3 * spotlightIntensity})`);
+    gradient.addColorStop(0.6, `rgba(255, 255, 255, ${0.1 * spotlightIntensity})`);
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY - 300);
+    ctx.lineTo(centerX - 400, centerY + 300);
+    ctx.lineTo(centerX + 400, centerY + 300);
+    ctx.closePath();
+    ctx.fill();
 }
 
-// Celebration
+// Confetti celebration - hearts and lilies with zooming background
+let celebrationStarted = false;
+let bgZoom = 1;
+let bgHue = 0;
+
 function startCelebration() {
-    const ctx = bgCanvas.getContext('2d');
+    celebrationStarted = true;
     
-    // Create raining hearts and lilies
-    for (let i = 0; i < 100; i++) {
-        celebrationParticles.push(createCelebrationParticle());
+    // Create lots of confetti particles
+    for (let i = 0; i < 150; i++) {
+        confettiParticles.push(createConfetti());
     }
-    
-    function draw() {
-        if (gameState !== 'celebration') return;
-        
-        celebrationParticles.forEach((p, index) => {
-            p.y += p.vy;
-            p.x += p.vx;
-            p.rotation += p.rotationSpeed;
-            p.orbitAngle += p.orbitSpeed;
-            
-            const orbitX = Math.cos(p.orbitAngle) * p.orbitRadius;
-            const orbitY = Math.sin(p.orbitAngle) * p.orbitRadius;
-            
-            const x = p.x + orbitX;
-            const y = p.y + orbitY;
-            
-            if (y > bgCanvas.height + 100) {
-                celebrationParticles[index] = createCelebrationParticle();
-            }
-            
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(p.rotation);
-            ctx.globalAlpha = 0.8;
-            
-            const size = 60 * p.scale;
-            ctx.drawImage(p.img, -size / 2, -size / 2, size, size);
-            
-            ctx.restore();
-        });
-        
-        requestAnimationFrame(draw);
-    }
-    
-    draw();
 }
 
-function createCelebrationParticle() {
+function createConfetti() {
     return {
-        x: Math.random() * bgCanvas.width,
-        y: -50 - Math.random() * 500,
+        x: Math.random() * confettiCanvas.width,
+        y: -100 - Math.random() * 500,
         img: Math.random() > 0.5 ? images.heart : images.lily,
-        vx: (Math.random() - 0.5) * 2,
-        vy: Math.random() * 3 + 2,
+        vx: (Math.random() - 0.5) * 8,
+        vy: Math.random() * 6 + 4,
         rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.08,
-        scale: Math.random() * 0.5 + 0.5,
-        orbitRadius: Math.random() * 80 + 40,
-        orbitAngle: Math.random() * Math.PI * 2,
-        orbitSpeed: (Math.random() - 0.5) * 0.04
+        rotationSpeed: (Math.random() - 0.5) * 0.2,
+        scale: Math.random() * 0.6 + 0.4,
+        wobblePhase: Math.random() * Math.PI * 2,
+        wobbleSpeed: Math.random() * 0.1 + 0.05
     };
+}
+
+function drawConfetti() {
+    if (!celebrationStarted) return;
+    
+    const ctx = confettiCanvas.getContext('2d');
+    
+    // Zooming color-changing background
+    bgZoom += 0.001;
+    bgHue = (bgHue + 0.5) % 360;
+    
+    // Draw animated background
+    const gradient = ctx.createRadialGradient(
+        confettiCanvas.width / 2, confettiCanvas.height / 2, 0,
+        confettiCanvas.width / 2, confettiCanvas.height / 2, confettiCanvas.width * bgZoom
+    );
+    
+    const h1 = bgHue;
+    const h2 = (bgHue + 30) % 360;
+    const h3 = (bgHue + 60) % 360;
+    
+    gradient.addColorStop(0, `hsl(${h1}, 100%, 90%)`);
+    gradient.addColorStop(0.5, `hsl(${h2}, 80%, 80%)`);
+    gradient.addColorStop(1, `hsl(${h3}, 70%, 70%)`);
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    
+    // Draw confetti
+    confettiParticles.forEach((p, index) => {
+        p.y += p.vy;
+        p.x += p.vx + Math.sin(p.wobblePhase) * 3;
+        p.wobblePhase += p.wobbleSpeed;
+        p.rotation += p.rotationSpeed;
+        p.vx *= 0.99; // Slow down horizontal
+        
+        // Reset if off screen
+        if (p.y > confettiCanvas.height + 100) {
+            confettiParticles[index] = createConfetti();
+            confettiParticles[index].y = -50;
+        }
+        
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.globalAlpha = 0.9;
+        
+        const size = 80 * p.scale;
+        ctx.drawImage(p.img, -size / 2, -size / 2, size, size);
+        
+        ctx.restore();
+    });
+    
+    // Add more confetti over time
+    if (confettiParticles.length < 250 && Math.random() < 0.1) {
+        confettiParticles.push(createConfetti());
+    }
 }
 
 // Handle resize
@@ -636,23 +627,6 @@ window.addEventListener('resize', () => {
         positionButtons();
     }
 });
-
-// Add pop-in animation
-const style = document.createElement('style');
-style.textContent = `
-@keyframes popIn {
-    0% {
-        transform: scale(0);
-    }
-    70% {
-        transform: scale(1.3);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-`;
-document.head.appendChild(style);
 
 // Initialize
 initGame();

@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Word Puzzle</title>
+    <title>Daily Word Puzzle - DailyGames.com</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Pacifico&display=swap" rel="stylesheet">
     <style>
         @import url('https://fonts.cdnfonts.com/css/winter-draw');
     </style>
@@ -20,30 +20,152 @@
     <!-- Spotlight canvas -->
     <canvas id="spotlight-canvas"></canvas>
 
-    <!-- Hangman Game Screen -->
-    <div id="game-screen" class="screen active">
-        <div class="game-container">
-            <h2 id="game-title">Word Puzzle</h2>
-            <div id="word-display"></div>
-            <div id="keyboard"></div>
-        </div>
-    </div>
-
-    <!-- Question Screen -->
-    <div id="question-screen" class="screen">
-        <div class="question-container">
-            <span id="name-prefix"></span>
-            <span id="question-text"></span>
-            <span id="question-mark"></span>
-            <div class="button-container">
-                <button id="yes-button" class="choice-btn yes-btn">YES</button>
-                <button id="no-button" class="choice-btn no-btn">No</button>
+    <!-- Website Header -->
+    <header id="site-header">
+        <div class="header-container">
+            <div class="logo">
+                <span class="logo-icon">🎮</span>
+                <span class="logo-text">DailyGames.com</span>
             </div>
+            <nav class="main-nav">
+                <a href="#">Home</a>
+                <a href="#" class="active">Word Puzzle</a>
+                <a href="#">Sudoku</a>
+                <a href="#">Crossword</a>
+                <a href="#">More Games</a>
+            </nav>
+            <div class="header-right">
+                <span class="date-display">February 6, 2026</span>
+                <button class="login-btn">Sign In</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <!-- Left Sidebar -->
+        <aside id="left-sidebar" class="sidebar">
+            <div class="sidebar-section">
+                <h3>Today's Puzzles</h3>
+                <ul class="puzzle-list">
+                    <li class="active">Word Puzzle #412</li>
+                    <li>Mini Crossword</li>
+                    <li>Spelling Bee</li>
+                    <li>Letter Boxed</li>
+                </ul>
+            </div>
+            <div class="sidebar-section">
+                <h3>Your Stats</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-number">24</span>
+                        <span class="stat-label">Played</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">87%</span>
+                        <span class="stat-label">Win Rate</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">5</span>
+                        <span class="stat-label">Streak</span>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-section ad-section">
+                <span class="ad-label">Advertisement</span>
+                <div class="fake-ad">Play More Games!</div>
+            </div>
+        </aside>
+
+        <!-- Game Area -->
+        <div id="game-screen" class="game-area">
+            <div class="game-header">
+                <h1 id="game-title">Daily Word Puzzle</h1>
+                <p class="game-subtitle">Guess the hidden phrase!</p>
+            </div>
+            
+            <div class="game-main">
+                <!-- Hangman Drawing -->
+                <div id="hangman-container">
+                    <svg id="hangman-svg" viewBox="0 0 200 250">
+                        <!-- Gallows -->
+                        <line x1="20" y1="230" x2="100" y2="230" stroke="#333" stroke-width="4"/>
+                        <line x1="60" y1="230" x2="60" y2="20" stroke="#333" stroke-width="4"/>
+                        <line x1="60" y1="20" x2="140" y2="20" stroke="#333" stroke-width="4"/>
+                        <line x1="140" y1="20" x2="140" y2="50" stroke="#333" stroke-width="4"/>
+                        <!-- Head -->
+                        <circle id="hm-head" cx="140" cy="70" r="20" stroke="#333" stroke-width="3" fill="none" class="hm-part"/>
+                        <!-- Body -->
+                        <line id="hm-body" x1="140" y1="90" x2="140" y2="150" stroke="#333" stroke-width="3" class="hm-part"/>
+                        <!-- Left Arm -->
+                        <line id="hm-larm" x1="140" y1="110" x2="110" y2="130" stroke="#333" stroke-width="3" class="hm-part"/>
+                        <!-- Right Arm -->
+                        <line id="hm-rarm" x1="140" y1="110" x2="170" y2="130" stroke="#333" stroke-width="3" class="hm-part"/>
+                        <!-- Left Leg -->
+                        <line id="hm-lleg" x1="140" y1="150" x2="110" y2="190" stroke="#333" stroke-width="3" class="hm-part"/>
+                        <!-- Right Leg -->
+                        <line id="hm-rleg" x1="140" y1="150" x2="170" y2="190" stroke="#333" stroke-width="3" class="hm-part"/>
+                    </svg>
+                    <div class="wrong-count">Wrong: <span id="wrong-counter">0</span>/6</div>
+                </div>
+
+                <!-- Word Display -->
+                <div id="word-display-container">
+                    <div id="word-display"></div>
+                </div>
+            </div>
+
+            <div id="keyboard"></div>
+            
+            <div class="game-footer">
+                <button class="hint-btn">💡 Hint</button>
+                <button class="reset-btn">🔄 New Game</button>
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <aside id="right-sidebar" class="sidebar">
+            <div class="sidebar-section">
+                <h3>How to Play</h3>
+                <ul class="rules-list">
+                    <li>Guess letters to reveal the phrase</li>
+                    <li>Green = correct letter</li>
+                    <li>Grey = wrong letter</li>
+                    <li>6 wrong guesses = game over</li>
+                </ul>
+            </div>
+            <div class="sidebar-section">
+                <h3>Trending</h3>
+                <ul class="trending-list">
+                    <li>🔥 Wordle #1,052</li>
+                    <li>📈 Connections</li>
+                    <li>⭐ Strands</li>
+                </ul>
+            </div>
+            <div class="sidebar-section">
+                <h3>Recent Winners</h3>
+                <div class="winners-list">
+                    <div class="winner">Player_42 - 2 min</div>
+                    <div class="winner">WordMaster - 3 min</div>
+                    <div class="winner">PuzzlePro - 4 min</div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Transformed Question Elements (hidden initially) -->
+    <div id="question-overlay">
+        <div id="name-prefix">aaroushi deshpande,</div>
+        <div id="transformed-question"></div>
+        <div class="button-container">
+            <button id="yes-button" class="choice-btn yes-btn">Yes</button>
+            <button id="no-button" class="choice-btn no-btn">No</button>
         </div>
     </div>
 
     <!-- Celebration Screen -->
     <div id="celebration-screen" class="screen">
+        <canvas id="confetti-canvas"></canvas>
         <div class="celebration-message">
             <h1>💖</h1>
         </div>
