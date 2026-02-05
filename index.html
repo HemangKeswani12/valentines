@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Special Question ❤️</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&family=Pacifico&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.cdnfonts.com/css/winter-draw');
+    </style>
+</head>
+<body>
+    <!-- Initial Name Popup -->
+    <div id="initial-screen" class="screen active">
+        <div id="name-text">aaroushi deshpande</div>
+    </div>
+
+    <!-- Zooming Animation Screen -->
+    <div id="zoom-screen" class="screen">
+        <canvas id="particles-canvas"></canvas>
+        <div id="zoom-text">LOADING MAGIC...</div>
+    </div>
+
+    <!-- Main Question Screen -->
+    <div id="question-screen" class="screen">
+        <canvas id="carousel-canvas"></canvas>
+        <div class="question-container">
+            <h1 id="question-text">Will you be my valentine?</h1>
+            <div class="button-container">
+                <button id="yes-button" class="choice-btn yes-btn">YES! 💕</button>
+                <button id="no-button" class="choice-btn no-btn">No</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Celebration Screen -->
+    <div id="celebration-screen" class="screen">
+        <canvas id="celebration-canvas"></canvas>
+        <div class="celebration-message">
+            <h1>YAAAY! 💖</h1>
+            <p>You've made me the happiest person! ✨</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
