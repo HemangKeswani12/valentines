@@ -45,11 +45,25 @@ const images = {
     pic3: new Image()
 };
 
-images.heart.src = './pics/hrt_nobg.png';
-images.lily.src = './pics/lily_nobg.png';
-images.pic1.src = './pics/1.png';
-images.pic2.src = './pics/2.png';
-images.pic3.src = './pics/3.png';
+// Use paths without ./
+images.heart.src = 'pics/hrt_nobg.png';
+images.lily.src = 'pics/lily_nobg.png';
+images.pic1.src = 'pics/1.png';
+images.pic2.src = 'pics/2.png';
+images.pic3.src = 'pics/3.png';
+
+// Log when images load
+let imagesLoaded = 0;
+const totalImages = 5;
+Object.values(images).forEach((img, i) => {
+    img.onload = () => {
+        imagesLoaded++;
+        console.log(`Image ${i + 1} loaded, total: ${imagesLoaded}/${totalImages}`);
+    };
+    img.onerror = () => {
+        console.error(`Failed to load image: ${img.src}`);
+    };
+});
 
 // Setup canvases
 function setupCanvases() {
@@ -233,8 +247,11 @@ function startTransition() {
     
     // Start visual effects
     setTimeout(() => {
+        console.log('Starting visual effects...');
         bgCanvas.classList.add('visible');
+        bgCanvas.style.opacity = '1';
         mouseCanvas.classList.add('visible');
+        mouseCanvas.style.opacity = '1';
         startBackgroundParticles();
         startCarousel();
         startSpotlight();
@@ -405,21 +422,24 @@ function startBackgroundParticles() {
 function startCarousel() {
     if (carouselStarted) return;
     carouselStarted = true;
+    console.log('Starting carousel with images loaded:', imagesLoaded);
     
     const rings = [
-        { radius: 350, count: 12, speed: 1 },
-        { radius: 500, count: 15, speed: 0.7 },
-        { radius: 650, count: 18, speed: 0.5 }
+        { radius: 300, count: 8, speed: 1 },
+        { radius: 450, count: 10, speed: 0.7 },
+        { radius: 600, count: 12, speed: 0.5 }
     ];
     
     rings.forEach((ring) => {
         for (let i = 0; i < ring.count; i++) {
             let img;
-            if (i % 2 === 0) {
+            // Alternate between pics and decorative
+            if (i % 3 === 0) {
+                img = images.pic1;
+            } else if (i % 3 === 1) {
                 img = Math.random() > 0.5 ? images.heart : images.lily;
             } else {
-                const pics = [images.pic1, images.pic2, images.pic3];
-                img = pics[i % 3];
+                img = i % 2 === 0 ? images.pic2 : images.pic3;
             }
             
             carouselItems.push({
@@ -432,6 +452,7 @@ function startCarousel() {
             });
         }
     });
+    console.log('Carousel items created:', carouselItems.length);
 }
 
 function drawBackgroundAndCarousel() {
@@ -458,30 +479,39 @@ function drawBackgroundAndCarousel() {
     });
     
     // Carousel
-    if (carouselStarted) {
+    if (carouselStarted && carouselItems.length > 0) {
         const centerX = bgCanvas.width / 2;
         const centerY = bgCanvas.height / 2;
         
-        carouselRotation += 0.003;
+        carouselRotation += 0.002;
         
         carouselItems.forEach((item, index) => {
+            // Skip if image not loaded
+            if (!item.img || !item.img.complete || item.img.naturalWidth === 0) return;
+            
             const angle = item.angle + carouselRotation * item.speed;
-            const wobble = Math.sin(carouselRotation * 3 + item.offset) * 40;
+            const wobble = Math.sin(carouselRotation * 3 + item.offset) * 30;
             const radius = item.radius + wobble;
             
             const x = centerX + Math.cos(angle) * radius;
             const y = centerY + Math.sin(angle) * radius;
             
-            const scale = 0.8 + Math.sin(angle) * 0.2;
-            const size = item.decorative ? 120 : 240;
+            const scale = 0.7 + Math.sin(angle) * 0.2;
+            const size = item.decorative ? 100 : 180;
             
             ctx.save();
             ctx.translate(x, y);
-            ctx.rotate(angle * 0.3);
-            ctx.globalAlpha = 0.5 + Math.sin(carouselRotation + index) * 0.2;
+            ctx.rotate(angle * 0.2);
+            ctx.globalAlpha = 0.6 + Math.sin(carouselRotation + index) * 0.2;
             ctx.shadowColor = '#ffc9f8';
-            ctx.shadowBlur = 20;
-            ctx.drawImage(item.img, -size * scale / 2, -size * scale / 2, size * scale, size * scale);
+            ctx.shadowBlur = 15;
+            
+            try {
+                ctx.drawImage(item.img, -size * scale / 2, -size * scale / 2, size * scale, size * scale);
+            } catch (e) {
+                // Image not ready yet
+            }
+            
             ctx.restore();
         });
     }
@@ -535,17 +565,17 @@ function startPhysicsFlood() {
     console.log('Starting physics flood!');
     physicsStarted = true;
     
-    // Spawn objects 3x faster and 3x more per tick
+    // Spawn objects 1.5x rate
     let spawnCount = 0;
     const spawnInterval = setInterval(() => {
-        for (let i = 0; i < 15; i++) {  // 3x more per tick (was 5)
+        for (let i = 0; i < 8; i++) {  // 1.5x more per tick
             spawnPhysicsObject();
         }
         spawnCount++;
-        if (spawnCount > 150) {  // 3x longer (was 100)
+        if (spawnCount > 120) {
             clearInterval(spawnInterval);
         }
-    }, 33);  // 3x faster (was 100ms)
+    }, 70);  // 1.5x faster
 }
 
 function spawnPhysicsObject() {

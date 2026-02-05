@@ -317,20 +317,21 @@ canvas.visible {
     font-family: 'Winter Draw', cursive;
     font-size: 3rem;
     color: #7a004b;
-    margin-bottom: 1.5rem;
     opacity: 0;
     transform: translateY(30px);
     transition: all 0.8s ease;
     display: none;
-    text-align: center;
-    width: 100%;
-    position: relative;
-    top: -50px;
+    position: fixed;
+    top: calc(50% - 150px);
+    left: 50%;
+    transform: translateX(-50%) translateY(30px);
+    white-space: nowrap;
+    z-index: 55;
 }
 
 #name-prefix.visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
     display: block;
 }
 
