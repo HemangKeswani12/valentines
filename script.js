@@ -307,16 +307,15 @@ function setupNoButtonRepel() {
     });
 }
 
-// YES button click - trigger physics flood
+// YES button click - trigger physics flood over existing page
 yesButton.addEventListener('click', function() {
     console.log('YES clicked!');
     gameState = 'celebration';
     
-    // Hide buttons and question
+    // Hide only the buttons
     buttonContainer.style.display = 'none';
-    gameScreen.style.display = 'none';
     
-    // Show and start physics
+    // Show physics canvas (transparent background - overlays existing page)
     physicsCanvas.classList.add('visible');
     physicsCanvas.style.opacity = '1';
     startPhysicsFlood();
@@ -527,25 +526,26 @@ function drawSpotlight() {
 
 // ========== PHYSICS ENGINE ==========
 let physicsStarted = false;
-const GRAVITY = 0.4;
-const BOUNCE = 0.3;
-const FRICTION = 0.99;
+const GRAVITY = 0.3;
+const BOUNCE = 0.15;
+const FRICTION = 0.98;
+const DAMPING = 0.95;
 
 function startPhysicsFlood() {
     console.log('Starting physics flood!');
     physicsStarted = true;
     
-    // Spawn objects rapidly
+    // Spawn objects 3x faster and 3x more per tick
     let spawnCount = 0;
     const spawnInterval = setInterval(() => {
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 15; i++) {  // 3x more per tick (was 5)
             spawnPhysicsObject();
         }
         spawnCount++;
-        if (spawnCount > 100) {
+        if (spawnCount > 150) {  // 3x longer (was 100)
             clearInterval(spawnInterval);
         }
-    }, 100);
+    }, 33);  // 3x faster (was 100ms)
 }
 
 function spawnPhysicsObject() {
@@ -553,14 +553,15 @@ function spawnPhysicsObject() {
     
     physicsObjects.push({
         x: Math.random() * (physicsCanvas.width - size * 2) + size,
-        y: -size - Math.random() * 100,
-        vx: (Math.random() - 0.5) * 6,
+        y: -size - Math.random() * 200,
+        vx: (Math.random() - 0.5) * 4,
         vy: Math.random() * 2 + 1,
         width: size,
         height: size,
         rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.1,
-        img: Math.random() > 0.5 ? images.heart : images.lily
+        rotationSpeed: (Math.random() - 0.5) * 0.08,
+        img: Math.random() > 0.5 ? images.heart : images.lily,
+        settled: false
     });
 }
 
@@ -569,33 +570,35 @@ function updatePhysics() {
     
     const ctx = physicsCanvas.getContext('2d');
     
-    // Pink background
-    const gradient = ctx.createLinearGradient(0, 0, 0, physicsCanvas.height);
-    gradient.addColorStop(0, '#ffc9f8');
-    gradient.addColorStop(1, '#ffb6c1');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, physicsCanvas.width, physicsCanvas.height);
+    // TRANSPARENT background - just clear, don't fill
+    ctx.clearRect(0, 0, physicsCanvas.width, physicsCanvas.height);
     
     // Update physics
     physicsObjects.forEach((obj, i) => {
         // Gravity
         obj.vy += GRAVITY;
         
-        // Velocity
+        // Apply velocity with damping
         obj.x += obj.vx;
         obj.y += obj.vy;
         obj.rotation += obj.rotationSpeed;
         
-        // Friction
+        // Friction on horizontal movement
         obj.vx *= FRICTION;
         
-        // Floor
+        // Floor collision with heavy damping
         const floor = physicsCanvas.height - obj.height / 2;
         if (obj.y > floor) {
             obj.y = floor;
             obj.vy *= -BOUNCE;
-            obj.rotationSpeed *= 0.7;
-            if (Math.abs(obj.vy) < 0.5) obj.vy = 0;
+            obj.vx *= 0.8;  // Extra friction on ground
+            obj.rotationSpeed *= 0.5;
+            
+            // Settle if moving slowly
+            if (Math.abs(obj.vy) < 1) {
+                obj.vy = 0;
+                obj.settled = true;
+            }
         }
         
         // Walls
@@ -608,35 +611,53 @@ function updatePhysics() {
             obj.vx *= -BOUNCE;
         }
         
-        // Collision with other objects
+        // Collision with other objects - improved
         for (let j = i + 1; j < physicsObjects.length; j++) {
             const other = physicsObjects[j];
             const dx = other.x - obj.x;
             const dy = other.y - obj.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            const minDist = (obj.width + other.width) / 2 * 0.7;
+            const minDist = (obj.width + other.width) / 2 * 0.65;
             
             if (dist < minDist && dist > 0) {
                 const overlap = minDist - dist;
                 const nx = dx / dist;
                 const ny = dy / dist;
                 
-                obj.x -= nx * overlap / 2;
-                obj.y -= ny * overlap / 2;
-                other.x += nx * overlap / 2;
-                other.y += ny * overlap / 2;
+                // Separate objects
+                const separationForce = overlap / 2;
+                obj.x -= nx * separationForce;
+                obj.y -= ny * separationForce;
+                other.x += nx * separationForce;
+                other.y += ny * separationForce;
                 
+                // Velocity exchange with damping
                 const dvx = obj.vx - other.vx;
                 const dvy = obj.vy - other.vy;
                 const dvn = dvx * nx + dvy * ny;
                 
                 if (dvn > 0) {
-                    obj.vx -= dvn * nx * 0.5;
-                    obj.vy -= dvn * ny * 0.5;
-                    other.vx += dvn * nx * 0.5;
-                    other.vy += dvn * ny * 0.5;
+                    const impulse = dvn * 0.3;  // Reduced impulse
+                    obj.vx -= impulse * nx * DAMPING;
+                    obj.vy -= impulse * ny * DAMPING;
+                    other.vx += impulse * nx * DAMPING;
+                    other.vy += impulse * ny * DAMPING;
+                }
+                
+                // If stacking vertically, settle faster
+                if (Math.abs(ny) > 0.7) {
+                    obj.vy *= 0.7;
+                    other.vy *= 0.7;
+                    obj.rotationSpeed *= 0.8;
+                    other.rotationSpeed *= 0.8;
                 }
             }
+        }
+        
+        // Extra damping for settled objects
+        if (obj.settled) {
+            obj.vx *= 0.9;
+            obj.rotationSpeed *= 0.9;
         }
         
         // Draw
